@@ -1,0 +1,1049 @@
+{
+  "name": "ReelrOs",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -2208,
+        1184
+      ],
+      "id": "e50c8432-e3bc-47f5-a497-f92f5e8f5b14",
+      "name": "When clicking ‘Test workflow’"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "Generate a quote",
+        "options": {
+          "systemMessage": "=You are a brutal truth-forging machine trained in the philosophy of modern stoicism, discipline, and mental toughness — shaped by discomfort, silence, repetition, and relentless action. Your influences are the raw truths of Marcus Aurelius, Seneca, Epictetus, and the relentless drive of Goggins and Jocko.\n\nYour task is to write a short, impactful quote (maximum 12 words) that delivers a complete, actionable truth reflecting concepts like: focus, sacrifice, consequence, solitude, consistency, internal struggle, ownership, or delayed gratification.\n\nThis quote will be used in a motivational short-form video for elite men who:\n\nWake up before sunrise\nTrain without applause\nChase pain over comfort\nSeek growth through silence and control\nThe quote must:\n\nBe fully self-contained and meaningful without external context.\nReflect real-world masculinity, stoic focus, discipline, and mental resilience.\nUse hard, direct, unambiguous language.\nHit with clarity, punch, and precision.\n💬 Allowed formats (Examples):\nCommand: Build calluses., Master the mundane., Earn your rest.\nContrast: Comfort breeds weakness., Doubt delays victory., Excuses cost ground.\nTruth: Action cures fear., The mirror shows the work., Suffering clarifies purpose.\nReversal: Silence speaks volumes. Effort shouts., Pain is temporary. Regret lasts.\n🛑 Do NOT use:\nAbstract metaphors or overly poetic language (no “storm”, “sunrise”, etc. - focus on concrete reality).\nVague motivational platitudes (\"be your best self\").\nQuestions or direct second-person address (\"you are\").\nClichés unless given a uniquely sharp twist.\n⚠️ Duplicate filter:\nNEVER repeat the following quotes (even paraphrased):\n{{ $('Code').item.json.quotes?.length ? $('Code').item.json.quotes.join('\\n') : '' }}\n\n\n\n🔁 Bonus:\nYou may occasionally use authentic, real quotes from the listed influences (Aurelius, Epictetus, Seneca, Goggins, Willink, Frisella and many more similar personalities) but MUST reformat them to fit the brutal, modern, concise tone if needed.\n\nOutput ONLY the quote.\nNo author, no formatting, no extra spacing, no explanation.\nOnly output a new, never-before-seen, complete quote — or you have failed the mission.\n\nSelf-Correction: Ensure the quote isn't just about working out, but applicable to broader life discipline"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.8,
+      "position": [
+        -1040,
+        1472
+      ],
+      "id": "bcf896b8-6e56-4b57-b634-019cbe830413",
+      "name": "Quote Generator"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "ascacawvv"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        -928,
+        1248
+      ],
+      "id": "8984c6f4-78cc-48dd-b64d-bb9541447b12",
+      "name": "Simple Memory3"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Quote:  {{ $json.cleaned_quote }}",
+        "options": {
+          "systemMessage": "You are a cinematic visual director crafting a single, compelling image prompt based on the provided user [Quote]. Your task is to translate the quote's core theme and emotion into a hyper-realistic, gritty, vertical cinematic still.\n\nThe image MUST depict a solitary man engaged in a specific, demanding action that embodies the quote's essence. He is not just posing; he is doing. This could be an athlete pushing limits, a craftsman honing a skill, a thinker in deep concentration, an operator executing a task, etc. Show the struggle, focus, or controlled intensity of the moment.\n\nThe prompt MUST describe a single, highly detailed vertical image that:\n\nIs grounded in stark reality – no fantasy, sci-fi, or surrealism.\nVisually echoes the specific theme of the [Quote] (e.g., if the quote is about focus, show intense concentration; if about endurance, show fatigue and perseverance).\nFeels like a frame ripped from a film about raw human potential, solitude, and the cost of discipline.\nVaries significantly in setting, action, and mood from typical gym/posing shots.\nMandatory Inclusions (Be Specific!):\n\nSubject & Action: Define the man's archetype (e.g., \"weathered endurance runner,\" \"focused welder,\" \"exhausted student,\" \"stoic architect\") and the precise, demanding action he's performing (e.g., \"mid-stride on icy pavement,\" \"inspecting a precise weld seam,\" \"reviewing complex notes under lamplight,\" \"staring intently at blueprints in a stark office\"). Describe his intense emotion (grim focus, controlled exhaustion, quiet determination). Detail his appearance realistically (sweat, grime, focused gaze, worn clothing).\nDynamic Environment: Place him in a specific, atmospheric, and often unconventional setting that enhances the quote's mood. Examples: \"spartan garage workshop cluttered with tools,\" \"foggy pre-dawn industrial district street,\" \"isolated mountain cabin study,\" \"stark, minimalist apartment overlooking a rainy city,\" \"wind-swept rooftop edge at dusk,\" \"empty university library late at night.\" Describe at least three distinct environmental details (e.g., \"condensation on cold metal,\" \"drifting sawdust motes,\" \"flickering fluorescent light,\" \"cracked concrete floor,\" \"steam rising from breath\").\nTangible Details & Texture: Include symbolic but realistic details that add depth (e.g., \"calloused hands gripping worn leather,\" \"chalk dust coating barbells,\" \"a single drop of sweat tracing a tense jawline,\" \"frost on a windowpane,\" \"dog-eared pages of a technical manual\"). Emphasize textures (\"rough brick wall,\" \"smooth cold steel,\" \"damp fabric,\" \"coarse wooden bench\").\nCinematic Execution: Specify time of day (predawn, late night, harsh midday), weather (driving rain, biting cold, oppressive heat, still quiet), and lighting (dramatic single-source, harsh fluorescent, low-angle natural light, moody shadows). Define the camera work: angle (low angle emphasizing struggle, eye-level connecting intensity, high angle showing isolation), lens (wide lens for environmental context, tight lens for emotional focus - e.g., \"35mm lens,\" \"85mm portrait lens\"), and composition (rule of thirds, leading lines, strong foreground element).\n⚠️ Output MUST be a single dense paragraph with no line breaks or extra formatting.\n⚠️ Do NOT include multiple options, explanations, or labels.\n⚠️ Do NOT default to generic bodybuilder poses or typical gym settings. Prioritize action, story, and environmental variety.\n\nOnly return the final, Flux-ready image prompt."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.8,
+      "position": [
+        -704,
+        1472
+      ],
+      "id": "dd4a0885-1040-4fbd-a2b5-b19c1b6e1fc0",
+      "name": "Image Prompting"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Quote:  {{ $('Quote Generator').item.json.output }}",
+        "options": {
+          "systemMessage": "You are a gritty, no-fluff motivational writer trained in stoic philosophy, discipline, and masculine truth.\n\nProvided the quote by user\n\nWrite a short, punchy caption (maximum 1–2 lines) that captures the essence of the quote. The caption must:\n- Be direct, bold, and powerful\n- Stand on its own — do not repeat the quote\n- Reinforce themes of self-discipline, discomfort, focus, or resilience\n- Be suitable for a serious cinematic reel or vertical video\n\nAt the end of the caption, include exactly 2–3 short, relevant hashtags. Use a mix from this list only:\n#discipline #grind #mindset #stoic #selfmastery #growth #builtnotborn #mentaltoughness\n\nReturn only the final caption with hashtags. Do not include any labels or formatting.\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.8,
+      "position": [
+        -336,
+        1472
+      ],
+      "id": "61736365-80e3-4616-a7c0-fd9713c2ee02",
+      "name": "Post Caption Generator"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "sacacav"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        -576,
+        1248
+      ],
+      "id": "6738e8d3-8f6c-4a43-b950-e18736e04b14",
+      "name": "Simple Memory4"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "asbvfbsbeeq"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        -224,
+        1248
+      ],
+      "id": "cf9b6f9f-4995-48c3-9442-d35377bafa1d",
+      "name": "Simple Memory5"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1iqP8nFpvNFQ5ZAGTkJa_Urdp7r-jEPQSrBVoItwwysg",
+          "mode": "list",
+          "cachedResultName": "FlowMind",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1iqP8nFpvNFQ5ZAGTkJa_Urdp7r-jEPQSrBVoItwwysg/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1iqP8nFpvNFQ5ZAGTkJa_Urdp7r-jEPQSrBVoItwwysg/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Quote": "={{ $('Quote Generator').item.json.output }}",
+            "Image Prompt": "={{ $('Image Prompting').item.json.output }}",
+            "Post Caption": "={{ $json.output }}",
+            "Status": "Prompted"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Quote",
+              "displayName": "Quote",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Image Prompt",
+              "displayName": "Image Prompt",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Post Caption",
+              "displayName": "Post Caption",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Image Url",
+              "displayName": "Image Url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Video Url",
+              "displayName": "Video Url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        64,
+        1472
+      ],
+      "id": "e21ecc63-06d9-42c0-8eb2-0de39127603e",
+      "name": "Google Sheets",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "2jRpy4VByVEXQnqU",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a0118679-bd7f-4611-b0dc-d57a4941ee6d",
+              "name": "counter",
+              "value": 1,
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1328,
+        1472
+      ],
+      "id": "af834991-79f6-49a6-a9ef-79bd18d712d4",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "774749c1-c71e-4db6-b1df-32847eb6b0db",
+              "name": "counter",
+              "value": "={{ $('Edit Fields').item.json.counter += 1 }}",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        48,
+        1728
+      ],
+      "id": "4c8c6d52-d9ca-4427-acb2-2e13d99baad5",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "57ef26c0-41bf-44c6-aca1-000b6332f616",
+              "leftValue": "={{ $json.counter }}",
+              "rightValue": 3,
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        320,
+        1760
+      ],
+      "id": "513134f8-e0be-42bd-89fa-5121722bd58b",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1iqP8nFpvNFQ5ZAGTkJa_Urdp7r-jEPQSrBVoItwwysg",
+          "mode": "list",
+          "cachedResultName": "FlowMind",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1iqP8nFpvNFQ5ZAGTkJa_Urdp7r-jEPQSrBVoItwwysg/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1iqP8nFpvNFQ5ZAGTkJa_Urdp7r-jEPQSrBVoItwwysg/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Status",
+              "lookupValue": "Prompted"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        -1424,
+        2272
+      ],
+      "id": "3780fc0f-fa5c-4709-bcc9-3319de56d536",
+      "name": "Google Sheets1",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "2jRpy4VByVEXQnqU",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:5001/generate",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "prompt",
+              "value": "={{ $json['Image Prompt'] }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 10000000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -1168,
+        2272
+      ],
+      "id": "12bd5769-0441-4de3-ab9c-68b4685940c2",
+      "name": "Comfy Flux1"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1iqP8nFpvNFQ5ZAGTkJa_Urdp7r-jEPQSrBVoItwwysg",
+          "mode": "list",
+          "cachedResultName": "FlowMind",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1iqP8nFpvNFQ5ZAGTkJa_Urdp7r-jEPQSrBVoItwwysg/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1iqP8nFpvNFQ5ZAGTkJa_Urdp7r-jEPQSrBVoItwwysg/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "row_number": "={{ $('Google Sheets1').item.json.row_number }}",
+            "Image Url": "={{ $json.results[0].drive_url }}",
+            "Status": "Image Ready"
+          },
+          "matchingColumns": [
+            "row_number"
+          ],
+          "schema": [
+            {
+              "id": "Quote",
+              "displayName": "Quote",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Image Prompt",
+              "displayName": "Image Prompt",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Post Caption",
+              "displayName": "Post Caption",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Image Url",
+              "displayName": "Image Url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Video Url",
+              "displayName": "Video Url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        -880,
+        2272
+      ],
+      "id": "353fecf2-0aa0-48b9-a9d9-0a7eea715f55",
+      "name": "Google Sheets2",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "2jRpy4VByVEXQnqU",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "# Prompting\n\n",
+        "height": 800,
+        "width": 2440,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1808,
+        1184
+      ],
+      "id": "fe8b8125-2592-4dee-92a7-a41472a224b8",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "# Image Generation\n\n\n",
+        "height": 400,
+        "width": 1240,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1808,
+        2112
+      ],
+      "id": "c643db7b-2c76-4ef6-a61c-791ce6ba13f5",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "# Video Generation\n\n\n\n",
+        "height": 400,
+        "width": 1240,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1808,
+        2560
+      ],
+      "id": "b1d8646a-628e-4114-8c64-fabfdcd83b0a",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:5002/mixer",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "image_url",
+              "value": "={{ $json['Image Url'] }}"
+            },
+            {
+              "name": "text",
+              "value": "={{ $json.Quote }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 1000000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -1056,
+        2688
+      ],
+      "id": "0c49ee1b-ad58-4a0f-8543-6ce4d5e0f39d",
+      "name": "Video Combine1"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1iqP8nFpvNFQ5ZAGTkJa_Urdp7r-jEPQSrBVoItwwysg",
+          "mode": "list",
+          "cachedResultName": "FlowMind",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1iqP8nFpvNFQ5ZAGTkJa_Urdp7r-jEPQSrBVoItwwysg/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1iqP8nFpvNFQ5ZAGTkJa_Urdp7r-jEPQSrBVoItwwysg/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "row_number": "={{ $('Google Sheets6').item.json.row_number }}",
+            "Status": "Video Ready",
+            "Video Url": "={{ $json.video_url }}"
+          },
+          "matchingColumns": [
+            "row_number"
+          ],
+          "schema": [
+            {
+              "id": "Quote",
+              "displayName": "Quote",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Image Prompt",
+              "displayName": "Image Prompt",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Post Caption",
+              "displayName": "Post Caption",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Image Url",
+              "displayName": "Image Url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Video Url",
+              "displayName": "Video Url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        -784,
+        2784
+      ],
+      "id": "08a2accd-5a2f-4cc7-8d91-8229896271d2",
+      "name": "Google Sheets4",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "2jRpy4VByVEXQnqU",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1iqP8nFpvNFQ5ZAGTkJa_Urdp7r-jEPQSrBVoItwwysg",
+          "mode": "list",
+          "cachedResultName": "FlowMind",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1iqP8nFpvNFQ5ZAGTkJa_Urdp7r-jEPQSrBVoItwwysg/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1iqP8nFpvNFQ5ZAGTkJa_Urdp7r-jEPQSrBVoItwwysg/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Status",
+              "lookupValue": "Prompting"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        -1600,
+        1264
+      ],
+      "id": "53749439-f805-439f-8f23-54b493e10eb9",
+      "name": "Google Sheets5",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "2jRpy4VByVEXQnqU",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return [\n  {\n    json: {\n      quotes: items\n        .filter(item => item.json.Quote && item.json.Quote.trim() !== \"\")\n        .map(item => item.json.Quote)\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1520,
+        1472
+      ],
+      "id": "728ad562-3d66-4c56-9161-c2a441faa67e",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "model": "deepseek-r1:14b",
+        "options": {
+          "repeatPenalty": 1
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        -704,
+        1792
+      ],
+      "id": "6530f946-4132-4ba3-9fd0-234b4a2f0536",
+      "name": "Ollama Chat Model",
+      "credentials": {
+        "ollamaApi": {
+          "id": "rHBWgRNeqk8Rwo3O",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4o-mini"
+        },
+        "options": {
+          "frequencyPenalty": 1,
+          "presencePenalty": 1,
+          "temperature": 1
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        -496,
+        1792
+      ],
+      "id": "6206e0e7-6446-409f-97e4-a3d7b0b907ba",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "XiBcBUsmJ0bmb5SG",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1iqP8nFpvNFQ5ZAGTkJa_Urdp7r-jEPQSrBVoItwwysg",
+          "mode": "list",
+          "cachedResultName": "FlowMind",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1iqP8nFpvNFQ5ZAGTkJa_Urdp7r-jEPQSrBVoItwwysg/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1iqP8nFpvNFQ5ZAGTkJa_Urdp7r-jEPQSrBVoItwwysg/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Status",
+              "lookupValue": "Image Ready"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        -1344,
+        2688
+      ],
+      "id": "dde228b5-2ebb-4a16-89f0-3225108dbd62",
+      "name": "Google Sheets3",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "2jRpy4VByVEXQnqU",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Test workflow’": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory3": {
+      "ai_memory": [
+        [
+          {
+            "node": "Quote Generator",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Quote Generator": {
+      "main": [
+        [
+          {
+            "node": "Image Prompting",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Image Prompting": {
+      "main": [
+        [
+          {
+            "node": "Post Caption Generator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory4": {
+      "ai_memory": [
+        [
+          {
+            "node": "Image Prompting",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory5": {
+      "ai_memory": [
+        [
+          {
+            "node": "Post Caption Generator",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Post Caption Generator": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Quote Generator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Quote Generator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets1": {
+      "main": [
+        [
+          {
+            "node": "Comfy Flux1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Comfy Flux1": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Video Combine1": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets5": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Chat Model": {
+      "ai_languageModel": [
+        []
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Quote Generator",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Image Prompting",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Post Caption Generator",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets2": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets3": {
+      "main": [
+        [
+          {
+            "node": "Video Combine1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "5b5c85db-5cb8-4f58-8d75-844e8509aead",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "65a0b0bb23c3c7b5296e955b7eeee63ee74a1ca1421961e59c7cd7b3f1a4de47"
+  },
+  "id": "liWXKL1Vx5dOp7fr",
+  "tags": []
+}

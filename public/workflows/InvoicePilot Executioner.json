@@ -1,0 +1,1204 @@
+{
+  "name": "InvoicePilot Executioner",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "id": "da97929f-8a2c-4053-aea1-34b69f6bb824",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -256,
+        176
+      ],
+      "webhookId": "telegram-webhook-id",
+      "credentials": {
+        "telegramApi": {
+          "id": "XSJpVWpRkZYqFxNF",
+          "name": "InvoicePilot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "file-exists-condition",
+              "leftValue": "={{ $('Telegram Trigger').message.document ? 'document' : ($('Telegram Trigger').message.photo ? 'photo' : 'none') }}",
+              "rightValue": "none",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "18e90ea3-4866-4ab3-a828-1fae8a37e430",
+      "name": "Check File Exists",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        240,
+        176
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "pdf-condition",
+              "leftValue": "={{ $('Telegram Trigger').item.json.message.document && $('Telegram Trigger').item.json.message.document.mime_type ? $('Telegram Trigger').item.json.message.document.mime_type : 'none' }}",
+              "rightValue": "application/pdf",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "baea4cd5-20a3-4e08-a451-677505e6cabc",
+      "name": "Check if PDF",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        464,
+        -16
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "photo-condition",
+              "leftValue": "={{ $('Telegram Trigger').item.json.message.photo ? 'photo' : 'none' }}",
+              "rightValue": "photo",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "image-document-condition",
+              "leftValue": "={{ $('Telegram Trigger').item.json.message.document && $('Telegram Trigger').item.json.message.document.mime_type ? $('Telegram Trigger').item.json.message.document.mime_type : 'none' }}",
+              "rightValue": "image/",
+              "operator": {
+                "type": "string",
+                "operation": "startsWith"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "id": "81f27c1c-600d-4c0b-ba02-b9cafbd2a98e",
+      "name": "Check if Image",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        464,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "fileId": "={{ $('Telegram Trigger').item.json.message.document.file_id }}",
+        "additionalFields": {}
+      },
+      "id": "905ac5ac-8d2f-4f5e-ba61-cc326d1ef69c",
+      "name": "Download PDF",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.1,
+      "position": [
+        688,
+        -32
+      ],
+      "webhookId": "44e86cfb-b346-4355-aa79-ad03874278b3",
+      "credentials": {
+        "telegramApi": {
+          "id": "XSJpVWpRkZYqFxNF",
+          "name": "InvoicePilot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "fileId": "={{$('Telegram Trigger').item.json.message.photo ?$('Telegram Trigger').item.json.message.photo[$('Telegram Trigger').item.json.message.photo.length - 1].file_id : $('Telegram Trigger').item.json.message.document.file_id }}",
+        "additionalFields": {}
+      },
+      "id": "6368bd52-4c18-4e3a-a78c-bf81a798ecc6",
+      "name": "Download Image",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.1,
+      "position": [
+        688,
+        176
+      ],
+      "webhookId": "c4057590-0523-48df-babc-5e85bf588461",
+      "credentials": {
+        "telegramApi": {
+          "id": "XSJpVWpRkZYqFxNF",
+          "name": "InvoicePilot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return items.map(it => {\n  const uid  = $('Telegram Trigger').first().json.message.from.id || 'anon';\n  const ts   = new Date().toISOString().replace(/[:.]/g, '-');\n  const rand = Math.random().toString(36).slice(2, 8);\n\n  const extRaw = (it.binary?.data?.fileExtension || 'pdf').toLowerCase();\n  const ext    = extRaw.replace('.', ''); // normalize (remove dot if any)\n\n  // Map common extensions to correct MIME types\n  const mimeMap = {\n    pdf:  'application/pdf',\n    jpg:  'image/jpeg',\n    jpeg: 'image/jpeg',\n    png:  'image/png',\n    webp: 'image/webp'\n  };\n\n  const mimeType = mimeMap[ext] || 'application/octet-stream'; // fallback\n\n  const isImage  = mimeType.startsWith('image/');\n  const fileType = isImage ? 'IMAGE' : 'PDF';\n\n  // Path: separate invoices-original vs invoices-images if needed\n  const folder = isImage ? 'invoices-images' : 'invoices-original';\n\n  it.json.supabasePath = `${folder}/${uid}/inv-${ts}-${rand}.${ext}`;\n  it.json.fileType = fileType;\n  it.json.mimeType = mimeType; // ✅ set correct MIME type\n\n  return it;\n});\n"
+      },
+      "id": "8954947a-44bb-42ff-9806-21d1fef87653",
+      "name": "Process File",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        912,
+        32
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://fdwerzjeipmpbgzcjdit.supabase.co/storage/v1/object/{{ $json.supabasePath }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "={{ $json.mimeType }}"
+            },
+            {
+              "name": "x-upsert",
+              "value": "true"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "binaryData",
+        "inputDataFieldName": "data",
+        "options": {}
+      },
+      "id": "71d4643c-c54e-43ec-ad2b-b55ea52b2826",
+      "name": "Upload to Supabase",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1136,
+        32
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "fXiU1STodwa9y3Lp",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.message.chat.id }}",
+        "text": "⚠️ No file detected in your message. Please send a PDF or image file (JPEG, JPG, PNG) for invoice processing.",
+        "additionalFields": {}
+      },
+      "id": "404e7f63-dcc8-472a-8aa5-0427508a7da5",
+      "name": "No File Response",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.1,
+      "position": [
+        464,
+        368
+      ],
+      "webhookId": "ac82497c-4f2e-4990-910d-ec7d3dcd856c",
+      "credentials": {
+        "telegramApi": {
+          "id": "XSJpVWpRkZYqFxNF",
+          "name": "InvoicePilot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.from.id }}",
+        "text": "=📄 Processing your invoice {{ $('Process File').item.json.fileType }}\n🔄 File uploaded successfully!\n⏳ Starting data extraction...",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "a8f93a5f-6e93-4fc9-8571-104ea44547e1",
+      "name": "Processing Notification",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.1,
+      "position": [
+        1360,
+        32
+      ],
+      "webhookId": "6e0336a0-96d9-49e7-b78d-987cf9dfbdb9",
+      "credentials": {
+        "telegramApi": {
+          "id": "XSJpVWpRkZYqFxNF",
+          "name": "InvoicePilot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "7f2fcc5c-51e4-41b8-a9bc-8b428fb03350",
+              "name": "ORG_ID",
+              "value": "60047531601",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        0,
+        176
+      ],
+      "id": "f668938c-d53a-46f6-8b50-8d75ca3d86c0",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "tableId": "files",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "org_id",
+              "fieldValue": "={{ $('Edit Fields').item.json.ORG_ID }}"
+            },
+            {
+              "fieldId": "source",
+              "fieldValue": "telegram"
+            },
+            {
+              "fieldId": "source_ref",
+              "fieldValue": "={{ $('Telegram Trigger').item.json.message.message_id }}"
+            },
+            {
+              "fieldId": "storage_key",
+              "fieldValue": "={{ $('Upload to Supabase').item.json.Key }}"
+            },
+            {
+              "fieldId": "mime_type",
+              "fieldValue": "={{ $('Process File').item.json.mimeType }}"
+            },
+            {
+              "fieldId": "size_bytes",
+              "fieldValue": "={{ $('Download Image').item.json.result.file_size || $('Download PDF').item.json.result.file_size }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1568,
+        32
+      ],
+      "id": "19889cd2-7e0d-402f-b35a-d1b4866e2727",
+      "name": "files",
+      "credentials": {
+        "supabaseApi": {
+          "id": "fXiU1STodwa9y3Lp",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "259f35d6-2fa3-47d5-b111-6f6edf3049ae",
+              "name": "org_id",
+              "value": "={{ $json.org_id }}",
+              "type": "string"
+            },
+            {
+              "id": "4a6ed08c-f30d-4e96-8994-3af8d6c25d6a",
+              "name": "file_id",
+              "value": "={{ $json.file_id }}",
+              "type": "number"
+            },
+            {
+              "id": "851a5a62-f4bc-4796-a6cc-9bb5e7ec4a68",
+              "name": "storage_key",
+              "value": "={{ $('files').item.json.storage_key }}",
+              "type": "string"
+            },
+            {
+              "id": "6bc4c27c-f194-48bc-ac8f-1e7484c497ed",
+              "name": "mime_type",
+              "value": "={{ $('files').item.json.mime_type }}",
+              "type": "string"
+            },
+            {
+              "id": "29286d4c-ace7-4c64-bc83-7072c19369ac",
+              "name": "ingestion_id",
+              "value": "={{ $json.ingestion_id }}",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        912,
+        416
+      ],
+      "id": "aed901a1-49ff-4911-a8cb-2c317f2b8d1d",
+      "name": "PostUpload Vars"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "ingestions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "ingestion_id",
+              "condition": "eq",
+              "keyValue": "={{ $json.ingestion_id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "status",
+              "fieldValue": "extracting"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1152,
+        416
+      ],
+      "id": "332b7e13-3567-4420-9c95-04e08f417fdc",
+      "name": "Status -> Extracting",
+      "credentials": {
+        "supabaseApi": {
+          "id": "fXiU1STodwa9y3Lp",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Trigger",
+        "height": 720,
+        "width": 1280,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -432,
+        -160
+      ],
+      "typeVersion": 1,
+      "id": "8fba2901-2174-40eb-8741-c03d3720900e",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "## Upload Invoice\n",
+        "height": 416,
+        "width": 1280,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        880,
+        -160
+      ],
+      "typeVersion": 1,
+      "id": "499c3c64-7c1e-489f-b6bc-2c6b4513cb19",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "## AI Extraction\n",
+        "height": 336,
+        "width": 1024,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        880,
+        288
+      ],
+      "typeVersion": 1,
+      "id": "7c1c5fb1-37c5-4a78-a498-15ffb2fdbe0e",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "tableId": "invoices_raw",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "org_id",
+              "fieldValue": "={{ $('PostUpload Vars').item.json.org_id }}"
+            },
+            {
+              "fieldId": "ingestion_id",
+              "fieldValue": "={{ $('PostUpload Vars').item.json.ingestion_id }}"
+            },
+            {
+              "fieldId": "payload",
+              "fieldValue": "={{ $json.output }}"
+            },
+            {
+              "fieldId": "extractor",
+              "fieldValue": "gemini-2.5-flash"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1632,
+        400
+      ],
+      "id": "4c0fe2e6-fd1b-4885-b2ff-b619ddb12c0d",
+      "name": "invoices_raw",
+      "credentials": {
+        "supabaseApi": {
+          "id": "fXiU1STodwa9y3Lp",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "tableId": "ingestions",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "org_id",
+              "fieldValue": "={{ $json.org_id }}"
+            },
+            {
+              "fieldId": "file_id",
+              "fieldValue": "={{ $json.file_id }}"
+            },
+            {
+              "fieldId": "status",
+              "fieldValue": "queued"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1760,
+        32
+      ],
+      "id": "7e54afa1-67f6-40a8-966e-ab019d8cbfd2",
+      "name": "ingestions",
+      "credentials": {
+        "supabaseApi": {
+          "id": "fXiU1STodwa9y3Lp",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "I9KX1kqj2KHrmdwE",
+          "mode": "list",
+          "cachedResultName": "InvoicePilot - Extract"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "mime_type": "={{ $('PostUpload Vars').item.json.mime_type }}",
+            "ingestion_id": "={{ $json.ingestion_id.toString() }}",
+            "storage_key": "={{ $('PostUpload Vars').item.json.storage_key }}",
+            "file_id": "={{ $json.file_id.toString() }}",
+            "org_id": "={{ $json.org_id }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "mime_type",
+              "displayName": "mime_type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "ingestion_id",
+              "displayName": "ingestion_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "storage_key",
+              "displayName": "storage_key",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "file_id",
+              "displayName": "file_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "org_id",
+              "displayName": "org_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1376,
+        416
+      ],
+      "id": "8f745bf4-68ce-4827-8332-82fc98e323d7",
+      "name": "InvoicePilot Extract",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "content": "## Normalize, Match Items & Handle Vendors\n\n\n\n",
+        "height": 288,
+        "width": 768,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        880,
+        656
+      ],
+      "typeVersion": 1,
+      "id": "0d9b69dc-6f8a-4fd3-ab40-aacd7f96b698",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "sshwgmH14M3iTgMo",
+          "mode": "list",
+          "cachedResultName": "InvoicePilot Normalize"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "raw_id": "={{ $json.raw_id.toString() }}"
+          },
+          "matchingColumns": [
+            "raw_id"
+          ],
+          "schema": [
+            {
+              "id": "raw_id",
+              "displayName": "raw_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        912,
+        752
+      ],
+      "id": "41a97343-bef7-417b-a86f-82370268e39a",
+      "name": "Normalize",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "xWcYFm7EBBAtG6JO",
+          "mode": "list",
+          "cachedResultName": "InvoicePilot - ItemMatch Vector"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "invoice_id": "={{ $json.invoice_id.toString() }}"
+          },
+          "matchingColumns": [
+            "invoice_id"
+          ],
+          "schema": [
+            {
+              "id": "invoice_id",
+              "displayName": "invoice_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1152,
+        752
+      ],
+      "id": "131440f0-2735-451e-a351-a7841d107831",
+      "name": "Item Matching",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "4bI8NDoDErkqONZ0",
+          "mode": "list",
+          "cachedResultName": "InvoicePilot - HandleVendor"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "invoice_id": "={{ $json.invoice_id.toString() }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "invoice_id",
+              "displayName": "invoice_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1392,
+        752
+      ],
+      "id": "149b31f0-d436-4374-906f-a89b0e242019",
+      "name": "HandleVendor",
+      "executeOnce": true,
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "content": "## Update Items, Create Payload & Send Bill\n\n\n\n",
+        "height": 288,
+        "width": 768,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        880,
+        976
+      ],
+      "typeVersion": 1,
+      "id": "625e5eb0-6814-4d88-90fc-ef76d88f1441",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "3Fr8GgViGisJXq17",
+          "mode": "list",
+          "cachedResultName": "InvoicePilot - BillPayloadBuilder"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "invoice_id": "={{ $('Normalize').item.json.invoice_id.toString() }}"
+          },
+          "matchingColumns": [
+            "invoice_id"
+          ],
+          "schema": [
+            {
+              "id": "invoice_id",
+              "displayName": "invoice_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1152,
+        1072
+      ],
+      "id": "500fcede-bd28-4025-baed-520ce1a5bba2",
+      "name": "create payload",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "4VZpLlBiTqE3BxF5",
+          "mode": "list",
+          "cachedResultName": "InvoicePilot - Send Bill"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "zoho_bill_payload": "={{ JSON.stringify($json.zoho_bill_payload) }}",
+            "invoice_id": "={{ $('Normalize').item.json.invoice_id.toString() }}"
+          },
+          "matchingColumns": [
+            "zoho_bill_payload"
+          ],
+          "schema": [
+            {
+              "id": "zoho_bill_payload",
+              "displayName": "zoho_bill_payload",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "invoice_id",
+              "displayName": "invoice_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1392,
+        1072
+      ],
+      "id": "f5aaa1d6-691d-49ad-89a2-2ae709116adf",
+      "name": "create bill",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "ofzas5qUY1RQRpfy",
+          "mode": "list",
+          "cachedResultName": "InvoicePilot - ItemsUpdator"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "organization_id": "={{ $('PostUpload Vars').item.json.org_id }}",
+            "invoice_id": "={{ $('Normalize').item.json.invoice_id.toString() }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "invoice_id",
+              "displayName": "invoice_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "organization_id",
+              "displayName": "organization_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        912,
+        1072
+      ],
+      "id": "20421a3a-f698-4b9e-bb6f-388706f15c4c",
+      "name": "Update Items",
+      "executeOnce": true
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check File Exists": {
+      "main": [
+        [
+          {
+            "node": "Check if PDF",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Check if Image",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No File Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check if PDF": {
+      "main": [
+        [
+          {
+            "node": "Download PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check if Image": {
+      "main": [
+        [
+          {
+            "node": "Download Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download PDF": {
+      "main": [
+        [
+          {
+            "node": "Process File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Image": {
+      "main": [
+        [
+          {
+            "node": "Process File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process File": {
+      "main": [
+        [
+          {
+            "node": "Upload to Supabase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload to Supabase": {
+      "main": [
+        [
+          {
+            "node": "Processing Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Check File Exists",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Processing Notification": {
+      "main": [
+        [
+          {
+            "node": "files",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "files": {
+      "main": [
+        [
+          {
+            "node": "ingestions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PostUpload Vars": {
+      "main": [
+        [
+          {
+            "node": "Status -> Extracting",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Status -> Extracting": {
+      "main": [
+        [
+          {
+            "node": "InvoicePilot Extract",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ingestions": {
+      "main": [
+        [
+          {
+            "node": "PostUpload Vars",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "InvoicePilot Extract": {
+      "main": [
+        [
+          {
+            "node": "invoices_raw",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "invoices_raw": {
+      "main": [
+        [
+          {
+            "node": "Normalize",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize": {
+      "main": [
+        [
+          {
+            "node": "Item Matching",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Item Matching": {
+      "main": [
+        [
+          {
+            "node": "HandleVendor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HandleVendor": {
+      "main": [
+        [
+          {
+            "node": "Update Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "create payload": {
+      "main": [
+        [
+          {
+            "node": "create bill",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Items": {
+      "main": [
+        [
+          {
+            "node": "create payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "e75ca595-0c36-4613-afe4-531b3de2f3d7",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "65a0b0bb23c3c7b5296e955b7eeee63ee74a1ca1421961e59c7cd7b3f1a4de47"
+  },
+  "id": "8mAXWYdQUOnIOkaH",
+  "tags": []
+}

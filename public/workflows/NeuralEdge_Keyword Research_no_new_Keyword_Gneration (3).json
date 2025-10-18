@@ -1,0 +1,1199 @@
+{
+  "name": "NeuralEdge_Keyword Research_no_new_Keyword_Gneration",
+  "nodes": [
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1yTiDAgcowuZjDVvS-wmuMhtG_EYUFqnm4P0zPTy3qVA",
+          "mode": "list",
+          "cachedResultName": "Topic_Research_Final",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1yTiDAgcowuZjDVvS-wmuMhtG_EYUFqnm4P0zPTy3qVA/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Pillar ",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1yTiDAgcowuZjDVvS-wmuMhtG_EYUFqnm4P0zPTy3qVA/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        80,
+        224
+      ],
+      "id": "9e4ab983-cdd1-45d9-a35a-75ec9b36eebe",
+      "name": "Get URl_Topic_Perplexity_Data_Research",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "ah9W3YDe6Zsy2SL4",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "let lastTopic = \"\";\n\nreturn items.flatMap(item => {\n  const topic = item.json.topic?.trim() || lastTopic;\n  const rawUrls = item.json.source_url?.trim();\n\n  if (!topic || !rawUrls) return [];\n\n  lastTopic = topic;\n\n  const urls = rawUrls\n    .split(/\\r?\\n+/) // handles newlines\n    .map(u => u.trim())\n    .filter(u => u.startsWith(\"http\"));\n\n  return urls.map(url => ({\n    json: {\n      topic,\n      source_url: url\n    }\n  }));\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        304,
+        224
+      ],
+      "id": "f979b258-d1e0-462b-834c-2e35fe185c96",
+      "name": "Extract_Required_Columns"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://googleads.googleapis.com/v21/customers/7169197346:generateKeywordIdeas",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleAdsOAuth2Api",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "content-type",
+              "value": "application/json"
+            },
+            {
+              "name": "developer-token",
+              "value": " zbFlqesDQrDjb5P-XUuD6g"
+            },
+            {
+              "name": "login-customer-id",
+              "value": "7169197346"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"keyword_plan_network\": \"GOOGLE_SEARCH_AND_PARTNERS\",\n  \"language\": \"languageConstants/1000\",\n  \"geoTargetConstants\": [\"geoTargetConstants/2840\"],\n  \"url_seed\": {\n    \"url\": \"{{ $json.source_url }}\"\n  }\n}\n",
+        "options": {}
+      },
+      "id": "360301c6-9410-45ed-9ef3-808c0833c47e",
+      "name": "Keyword_Ideas_URL_Based",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        560,
+        224
+      ],
+      "notesInFlow": true,
+      "retryOnFail": true,
+      "typeVersion": 4.2,
+      "waitBetweenTries": 2000,
+      "maxTries": 2,
+      "executeOnce": true,
+      "credentials": {
+        "googleAdsOAuth2Api": {
+          "id": "yAQEmCWgJaEPakwS",
+          "name": "Google Ads account"
+        }
+      },
+      "notes": "Call the endpoint: \n\nhttps://googleads.googleapis.com/v18/customers/{customer_id}:generateKeywordIdeas \n\nwith your Customer id"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Each incoming item should look like:\n// { json: { topic, source_url, results: [ { text, keywordIdeaMetrics: {...} }, ... ] } }\n\nconst out = [];\n\nfor (const item of items) {\n  const { topic, source_url, results = [] } = item.json;\n\n  for (const r of results) {\n    const m = r.keywordIdeaMetrics || {};\n\n    out.push({\n      json: {\n        topic,\n        source_url,\n        keyword: r.text,\n        avg_monthly_searches: Number(m.avgMonthlySearches ?? 0),\n        competition: m.competition || '',\n        competition_index: Number(m.competitionIndex ?? 0),\n\n        // Convert micros → currency units (e.g., USD)\n        low_top_of_page_bid: Math.round((Number(m.lowTopOfPageBidMicros || 0) / 1e6) * 100) / 100,\n        high_top_of_page_bid: Math.round((Number(m.highTopOfPageBidMicros || 0) / 1e6) * 100) / 100,\n\n        // Optional: keep last 12 months in a compact string for quick review\n        last12mo_searches: (m.monthlySearchVolumes || [])\n          .map(v => `${v.month}-${v.year}:${v.monthlySearches}`)\n          .join(' | ')\n      }\n    });\n  }\n}\n\nreturn out;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        816,
+        224
+      ],
+      "id": "36bd2df7-17a8-4c8d-8ef4-5831fa5db50c",
+      "name": "Format_Output"
+    },
+    {
+      "parameters": {
+        "jsCode": "const filteredItems = [];\n\nfor (const item of $input.all()) {\n  const keyword = item.json.keyword.toLowerCase();\n  const avgVolume = parseInt(item.json.avg_monthly_searches);\n  const lowBid = parseFloat(item.json.low_top_of_page_bid);\n  const highBid = parseFloat(item.json.high_top_of_page_bid);\n  const avgBid = (lowBid + highBid) / 2;\n\n  // AI-related detection\n  const aiTerms = ['ai', 'artificial intelligence', 'artificial-intelligence',\n                   'intelligent', \"artificial\", 'chatbot', 'bot', 'digital assistant'];\n  const isAiKeyword = aiTerms.some(term => keyword.includes(term));\n\n  // Elite rules for pillar\n  if (\n    avgVolume >= 500 ||                      // strong volume\n    (avgVolume >= 200 && avgBid >= 300) ||   // mid-volume but strong commercial\n    (isAiKeyword && avgVolume >= 100)        // AI override if min volume met\n  ) {\n    item.json.isAiKeyword = isAiKeyword;\n    item.json.avgBid = Math.round(avgBid);\n\n    // Classification\n    item.json.keywordType = \n      isAiKeyword ? \"AI_PROTECTED\" :\n      avgVolume >= 5000 ? \"ULTRA_VOLUME\" :\n      avgVolume >= 1000 ? \"HIGH_VOLUME\" :\n      avgBid >= 300 ? \"COMMERCIAL_VALUE\" : \"QUALIFIED\";\n\n    filteredItems.push(item);\n  }\n}\n\nreturn filteredItems;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1040,
+        224
+      ],
+      "id": "d9e21078-3752-400c-b9dd-8c325e467bfc",
+      "name": "Filter1_Volume_AI protected"
+    },
+    {
+      "parameters": {
+        "jsCode": "const filteredItems = [];\n\nfor (const item of $input.all()) {\n  const competitionIndex = parseInt(item.json.competition_index);\n  const isAiKeyword = item.json.isAiKeyword || false;\n\n  const avgBid = item.json.avgBid || (() => {\n    const lowBid = parseFloat(item.json.low_top_of_page_bid);\n    const highBid = parseFloat(item.json.high_top_of_page_bid);\n    return (lowBid + highBid) / 2;\n  })();\n\n  const bidSpread = parseFloat(item.json.high_top_of_page_bid) - parseFloat(item.json.low_top_of_page_bid);\n\n  let competitionTier;\n  let shouldKeep = false;\n\n  if (competitionIndex <= 40 && avgBid < 150) {\n    competitionTier = \"EASY_WIN\";\n    shouldKeep = true;\n  } else if (competitionIndex <= 60 && avgBid < 400) {\n    competitionTier = \"SWEET_SPOT\";\n    shouldKeep = true;\n  } else if (competitionIndex <= 70 && bidSpread < 800) {\n    competitionTier = \"PILLAR_WORTHY_OPPORTUNITY\"; // for pillar we allow up to 70\n    shouldKeep = true;\n  }\n\n  // AI override\n  if (isAiKeyword && competitionIndex <= 80) {\n    shouldKeep = true;\n    if (competitionIndex > 70) competitionTier = \"AI_PROTECTED_HARD\";\n  }\n\n  if (shouldKeep) {\n    item.json.competitionTier = competitionTier;\n    item.json.competitionIndex = competitionIndex;\n    item.json.avgBid = Math.round(avgBid);\n    item.json.bidSpread = Math.round(bidSpread);\n\n    item.json.commercialScore = avgBid >= 500 ? 25 :\n                               avgBid >= 300 ? 20 :\n                               avgBid >= 150 ? 15 : 10;\n\n    filteredItems.push(item);\n  }\n}\n\nreturn filteredItems;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1296,
+        224
+      ],
+      "id": "faec495d-612d-4a90-ab05-7d7010002489",
+      "name": "Filter2_Competition_Medium/Low1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const filteredItems = [];\n\nfor (const item of $input.all()) {\n  const lastMonths = item.json.last12mo_searches;\n  const isAiKeyword = item.json.isAiKeyword || false;\n  const competitionIndex = parseInt(item.json.competition_index);\n\n  const avgBid = item.json.avgBid || (() => {\n    const lowBid = parseFloat(item.json.low_top_of_page_bid);\n    const highBid = parseFloat(item.json.high_top_of_page_bid);\n    return (lowBid + highBid) / 2;\n  })();\n\n  if (!lastMonths || !lastMonths.match) continue;\n\n  const volumeMatches = lastMonths.match(/(\\w+-\\d{4}):(\\d+)/g);\n  if (!volumeMatches || volumeMatches.length < 6) continue;\n\n  const volumes = volumeMatches.map(match => parseInt(match.split(':')[1]));\n  const recent3 = volumes.slice(-3);\n  const first3 = volumes.slice(0, 3);\n\n  const recentAvg = recent3.reduce((a, b) => a + b, 0) / 3;\n  const firstAvg = first3.reduce((a, b) => a + b, 0) / 3;\n\n  const trendPercent = firstAvg > 0 ? ((recentAvg - firstAvg) / firstAvg) * 100 : 0;\n\n  let trendDirection;\n  if (trendPercent > 10) trendDirection = \"GROWING\";\n  else if (trendPercent < -20) trendDirection = \"DECLINING\";\n  else trendDirection = \"STABLE\";\n\n  let marketOpportunity;\n  if (trendDirection === \"GROWING\" && competitionIndex <= 70 && avgBid >= 200) {\n    marketOpportunity = \"GOLDMINE\";\n  } else if (trendDirection === \"GROWING\" && avgBid < 100) {\n    marketOpportunity = \"EMERGING_NICHE\";\n  } else if (trendDirection === \"STABLE\" && competitionIndex <= 50) {\n    marketOpportunity = \"CONSISTENT\";\n  } else if (trendDirection === \"DECLINING\" && avgBid >= 500 && isAiKeyword) {\n    marketOpportunity = \"HIGH_VALUE_DECLINING_AI\";\n  } else {\n    marketOpportunity = \"STANDARD\";\n  }\n\n  if (\n    trendDirection === \"GROWING\" ||\n    (trendDirection === \"STABLE\" && competitionIndex <= 50) ||\n    (trendDirection === \"DECLINING\" && marketOpportunity.includes(\"AI\"))\n  ) {\n    item.json.trendDirection = trendDirection;\n    item.json.trendPercent = Math.round(trendPercent);\n    item.json.marketOpportunity = marketOpportunity;\n\n    filteredItems.push(item);\n  }\n}\n\nreturn filteredItems;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1552,
+        224
+      ],
+      "id": "3aed433c-3272-4c75-b0c8-93a1df41d794",
+      "name": "Filter3_Trend Analysis Filter1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build a single batch object that carries all keywords WITH metrics\nconst allItems = $input.all();\n\nconst keywords = allItems.map(({ json }) => {\n  // fallback helpers\n  const avgMonthly = json.avg_monthly_searches ?? json.avgMonthlySearches ?? 0;\n  const compIdx = json.competition_index ?? json.competitionIndex ?? 0;\n\n  // avgBid fallback to midpoint of low/high bid if missing\n  const lowBid = json.low_top_of_page_bid ?? 0;\n  const highBid = json.high_top_of_page_bid ?? 0;\n  const avgBid =\n    json.avgBid != null\n      ? json.avgBid\n      : (Number(lowBid) + Number(highBid)) / 2;\n\n  return {\n    keyword: json.keyword,\n    avg_monthly_searches: Number(avgMonthly),\n    competition_index: Number(compIdx),\n    avgBid: Number(avgBid),\n    competitionTier: json.competitionTier ?? null,\n    commercialScore: json.commercialScore ?? null,\n    trendDirection: json.trendDirection ?? null,\n    marketOpportunity: json.marketOpportunity ?? null,\n  };\n});\n\nreturn [\n  {\n    keywords,                 // array of keyword objects with required fields\n    totalKeywords: keywords.length,\n  },\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1808,
+        224
+      ],
+      "id": "fd356501-c6a0-4c68-9f30-3c21dbc2f13d",
+      "name": "One List"
+    },
+    {
+      "parameters": {
+        "model": "google/gemini-2.5-flash",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        2176,
+        720
+      ],
+      "id": "c284f9f7-dc96-46ff-bb9a-0189dc575fcf",
+      "name": "OpenRouter Chat Model",
+      "credentials": {
+        "openRouterApi": {
+          "id": "SwPBNGHfX7DPhTDU",
+          "name": "OpenRouter account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Input:\n\n- TARGET TOPIC: {{ $('Get URl_Topic_Perplexity_Data_Research').first().json.topic }}\n- PAIN POINT CONTEXT: {{ $('Get URl_Topic_Perplexity_Data_Research').first().json.pain_point }}\n- KEYWORD List: {{ JSON.stringify($json.keywords, null, 2) }}\n",
+        "options": {
+          "systemMessage": "=# PILLAR POST AI FILTERING SYSTEM MESSAGE\n\nYou are an industry search behavior expert specializing in comprehensive content strategy. Your mission is to identify keywords that represent the full spectrum of how people explore, research, and seek solutions within an entire industry vertical.\n\n## YOUR TASK\nBuild an extensive keyword arsenal for pillar content by understanding how people navigate industry-wide challenges. Select keywords that capture the complete customer journey from initial problem awareness to solution evaluation across the entire vertical.\n\n## SELECTION APPROACH\n\n**THINK LIKE THE INDUSTRY EXPLORER:**\n- How do people first discover they have industry-wide problems?\n- What broad questions do they ask when researching solutions?\n- How do they compare different approaches and technologies?\n- What industry terminology do they use vs. technical jargon?\n- What do they search for when building comprehensive understanding?\n\n**LEVERAGE FILTER CLASSIFICATIONS:**\nKeywords come pre-scored with: keywordType, competitionTier, marketOpportunity, trendDirection\n- Prioritize GOLDMINE and EMERGING_NICHE opportunities\n- Balance EASY_WIN with PILLAR_WORTHY_OPPORTUNITY\n- Include AI_PROTECTED keywords (industry transformation focus)\n- Mix GROWING and STABLE trends for comprehensive coverage\n\n**INDUSTRY-WIDE SEARCH PATTERNS:**\n- Broad problem identification (\"challenges in [industry],\" \"common problems\")\n- Solution category exploration (\"ai solutions for,\" \"automation in,\" \"technology for\")\n- Industry education searches (\"guide to,\" \"introduction to,\" \"understanding\")\n- Comparison and evaluation terms (\"benefits of,\" \"advantages,\" \"why use\")\n- Implementation and strategy searches (\"best practices,\" \"how to implement,\" \"strategy\")\n- Future and trend searches (\"future of,\" \"trends in,\" \"emerging technology\")\n\n**CAPTURE COMPREHENSIVE COVERAGE:**\n- Core industry terminology and concepts\n- Problem statements at different levels of sophistication\n- Solution categories and technology types\n- Implementation and strategic considerations\n- Industry-specific processes and workflows\n- Regulatory, compliance, and best practice terms\n- ROI, efficiency, and business impact keywords\n\n**INCLUDE KEYWORDS THAT:**\n- Cover the full industry landscape, not just one narrow area\n- Represent different levels of user expertise (beginner to advanced)\n- Show various stages of the research and evaluation process\n- Support comprehensive, authoritative content creation\n- Address multiple pain points within the industry vertical\n- Include both technical and business-focused perspectives\n\n**REASONABLE FILTERING:**\n- Focus on industry-relevant terms\n- Skip overly narrow, tool-specific keywords (save for clusters)\n- Avoid pure brand names without descriptive context\n- Remove keywords completely unrelated to the industry vertical\n\n## OUTPUT TARGET\nReturn 40-60 keywords that collectively represent how people explore, research, and seek solutions across the entire industry vertical from multiple perspectives and expertise levels.\n\n## INPUT FORMAT\nTARGET TOPIC: [industry vertical focus]\nPAIN POINT CONTEXT: [broad industry challenges]\nKEYWORDS WITH DATA: [keyword | volume | avgBid | competitionTier | marketOpportunity | trendDirection]\n\n## OUTPUT FORMAT\nReturn only the selected keywords, one per line, no additional text:\nkeyword_1\nkeyword_2\nkeyword_3"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        2048,
+        224
+      ],
+      "id": "a6305d8e-6037-42ca-aa43-ef05aed599f0",
+      "name": "Search Terms Designer1"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Input:\n\n- TARGET TOPIC: {{ $('Extract_Required_Columns').first().json.topic }}\n- KEYWORD List | Topic Relevance Score: {{ $json.output }}",
+        "options": {
+          "systemMessage": "=You are an **Elite SEO Keyword Strategist** with access to the **Perplexity tool**.\nUse the tool whenever needed to analyze keywords, search behavior, and intent.\n\nYour task is to process the given **Target Topic** and **Keyword List (with scores)**.\n\n### Instructions:\n\n1. **Select Primary Keyword:**\n\n   * From the Main Keywords, choose **one Primary Keyword**.\n   * Provide the keyword and a short reason why it was chosen (based on highest score + strongest alignment with topic).\n\n2. **Categorize Keywords into 5 groups:**\n\n   * Main Keywords\n   * Long-Tail Keywords\n   * NLP Keywords\n   * FAQs\n   * Semantic Keywords\n   * ⚠️ Do not duplicate keywords. Do not include the Primary Keyword again in the lists.\n\n3. **Generate Search Intent per Category:**\n\n   * For each category, write a short intent statement (plain language: *why people search in this category*).\n   * Example: *“Users searching long-tail keywords are looking for specific step-by-step solutions for niche problems.”*\n\n4. **Final Unified Search Intent:**\n\n   * Create a single, comprehensive intent statement that synthesizes all 5 categories.\n   * This represents the **big-picture motivation** of the audience.\n   * This intent will be used to decide the **blog structure** (based on the core selectors file).\n\n5. **Output Format (JSON):**\n\n\n{\n  \"topic\": \"AI-driven lead generation and follow-up in real estate agencies\",\n  \"primaryKeyword\": {\n    \"keyword\": \"ai lead generation\",\n    \"reason\": \"It has the highest score and aligns most strongly with the topic’s focus on real estate sales growth.\"\n  },\n  \"categories\": {\n    \"mainKeywords\": {\n      \"keywords\": [\"ai for real estate leads\", \"lead generation ai\", \"ai lead generation tools\"],\n      \"intent\": \"Main keywords reflect broad, high-volume searches where users want to discover the most relevant core solutions.\"\n    },\n    \"longTailKeywords\": {\n      \"keywords\": [\"best ai for real estate investors\", \"lead generation companies for real estate\", \"lead generation using ai\"],\n      \"intent\": \"Long-tail keywords show that users are searching for specific, detailed solutions tailored to their unique problems or contexts.\"\n    },\n    \"nlpKeywords\": {\n      \"keywords\": [\"ai for real estate\", \"real estate ai\", \"ai for realtors\"],\n      \"intent\": \"NLP keywords reveal how people naturally phrase their searches when exploring general AI applications in real estate.\"\n    },\n    \"faqs\": {\n      \"keywords\": [\"how to use ai for real estate leads\", \"can ai generate real estate leads\", \"what is ai lead generation\"],\n      \"intent\": \"FAQ keywords represent direct questions where users seek explanations, guidance, or reassurance about AI in real estate.\"\n    },\n    \"semanticKeywords\": {\n      \"keywords\": [\"ai chatbots\", \"real estate ai assistant\", \"ai email marketing\"],\n      \"intent\": \"Semantic keywords highlight related tools and concepts that support or complement lead generation through AI.\"\n    }\n  },\n  \"finalSearchIntent\": \"Real estate professionals are motivated to adopt AI not just for lead generation, but to improve efficiency, automate repetitive tasks, and strengthen client acquisition and follow-up processes. They want practical, proven tools and step-by-step guidance that directly translate into more sales, better client nurturing, and long-term profitability.\"\n}\n\n\nAdditional Rules:\n- Remove duplicate or near-duplicate keywords (different word order or minor variation counts as duplicate).\n- Keep only the version with the highest score.\n- Do not repeat the Primary Keyword in categories.\n- Ensure each keyword appears only once in the final output.\n\n---\n\n\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        2528,
+        224
+      ],
+      "id": "1ce83241-a62c-4523-aa22-7cc05e4f5f98",
+      "name": "Search Terms Designer"
+    },
+    {
+      "parameters": {
+        "model": "sonar",
+        "messages": {
+          "message": [
+            {
+              "content": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('message0_Text', ``, 'string') }}"
+            }
+          ]
+        },
+        "options": {},
+        "requestOptions": {}
+      },
+      "type": "n8n-nodes-base.perplexityTool",
+      "typeVersion": 1,
+      "position": [
+        2656,
+        688
+      ],
+      "id": "a90211b8-7814-4df3-a326-8cabf878e45f",
+      "name": "Message a model in Perplexity",
+      "credentials": {
+        "perplexityApi": {
+          "id": "hnAkHDXu5SEjPFhk",
+          "name": "Perplexity account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse the stringified JSON inside \"output\"\nlet raw = $json.output;\n\n// Clean if wrapped in ```json ``` formatting\nif (typeof raw === \"string\") {\n  raw = raw.replace(/```json\\n?/g, \"\").replace(/```/g, \"\");\n  raw = JSON.parse(raw);\n} else {\n  raw = raw;\n}\n\n// Now flatten\nconst item = raw;\n\nconst output = {\n  topic: item.topic,\n  \"primary keyword\": item.primaryKeyword.keyword,\n  \"main keywords\": item.categories.mainKeywords.keywords.join(\", \"),\n  \"main keywords intent\": item.categories.mainKeywords.intent,\n  \"long tail keywords\": item.categories.longTailKeywords.keywords.join(\", \"),\n  \"long tail keywords intent\": item.categories.longTailKeywords.intent,\n  \"nlp keywords\": item.categories.nlpKeywords.keywords.join(\", \"),\n  \"nlp keywords intent\": item.categories.nlpKeywords.intent,\n  \"faqs\": item.categories.faqs.keywords.join(\", \"),\n  \"faqs intent\": item.categories.faqs.intent,\n  \"semantic keywords\": item.categories.semanticKeywords.keywords.join(\", \"),\n  \"semantic keywords intent\": item.categories.semanticKeywords.intent,\n  \"final search intent\": item.finalSearchIntent\n};\n\nreturn [output];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2944,
+        224
+      ],
+      "id": "f551c510-ce2c-4d7f-9ca7-90d216554a45",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1D2R7TKBPTcqxAdrer40Y1aapcddqRWfYNFRARgaAsvk",
+          "mode": "list",
+          "cachedResultName": "Finalised_Keywords",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1D2R7TKBPTcqxAdrer40Y1aapcddqRWfYNFRARgaAsvk/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Pillar",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1D2R7TKBPTcqxAdrer40Y1aapcddqRWfYNFRARgaAsvk/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "topic",
+              "displayName": "topic",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "primary keyword",
+              "displayName": "primary keyword",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "main keywords",
+              "displayName": "main keywords",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "main keywords intent",
+              "displayName": "main keywords intent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "long tail keywords",
+              "displayName": "long tail keywords",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "long tail keywords intent",
+              "displayName": "long tail keywords intent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "nlp keywords",
+              "displayName": "nlp keywords",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "nlp keywords intent",
+              "displayName": "nlp keywords intent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "faqs",
+              "displayName": "faqs",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "faqs intent",
+              "displayName": "faqs intent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "semantic keywords",
+              "displayName": "semantic keywords",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "semantic keywords intent",
+              "displayName": "semantic keywords intent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "final search intent",
+              "displayName": "final search intent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        3168,
+        224
+      ],
+      "id": "235ee405-d3cc-412a-9892-e0fcee23d0dd",
+      "name": "Keyword_Research_Final",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "ah9W3YDe6Zsy2SL4",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1yTiDAgcowuZjDVvS-wmuMhtG_EYUFqnm4P0zPTy3qVA",
+          "mode": "list",
+          "cachedResultName": "Topic_Research_Final",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1yTiDAgcowuZjDVvS-wmuMhtG_EYUFqnm4P0zPTy3qVA/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1538252249,
+          "mode": "list",
+          "cachedResultName": "Cluster ",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1yTiDAgcowuZjDVvS-wmuMhtG_EYUFqnm4P0zPTy3qVA/edit#gid=1538252249"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -32,
+        1328
+      ],
+      "id": "a7b0b923-0f26-4023-8577-503a6194b658",
+      "name": "Get URl_Topic_Perplexity_Data_Research1",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "ah9W3YDe6Zsy2SL4",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "let lastTopic = \"\";\n\nreturn items.flatMap(item => {\n  const topic = item.json.topic?.trim() || lastTopic;\n  const rawUrls = item.json.source_url?.trim();\n\n  if (!topic || !rawUrls) return [];\n\n  lastTopic = topic;\n\n  const urls = rawUrls\n    .split(/\\r?\\n+/) // handles newlines\n    .map(u => u.trim())\n    .filter(u => u.startsWith(\"http\"));\n\n  return urls.map(url => ({\n    json: {\n      topic,\n      source_url: url\n    }\n  }));\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        192,
+        1328
+      ],
+      "id": "96b51fe2-188a-48dd-a090-bbfc7e10decc",
+      "name": "Extract_Required_Columns1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://googleads.googleapis.com/v21/customers/7169197346:generateKeywordIdeas",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleAdsOAuth2Api",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "content-type",
+              "value": "application/json"
+            },
+            {
+              "name": "developer-token",
+              "value": "zbFlqesDQrDjb5P-XUuD6g"
+            },
+            {
+              "name": "login-customer-id",
+              "value": "7169197346"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"keyword_plan_network\": \"GOOGLE_SEARCH_AND_PARTNERS\",\n  \"language\": \"languageConstants/1000\",\n  \"geoTargetConstants\": [\"geoTargetConstants/2840\"],\n  \"url_seed\": {\n    \"url\": \"{{ $json.source_url }}\"\n  }\n}\n",
+        "options": {}
+      },
+      "id": "7057d3c4-9697-4a7d-9d84-ec9290d07ed7",
+      "name": "Keyword_Ideas_URL_Based1",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        448,
+        1328
+      ],
+      "notesInFlow": true,
+      "retryOnFail": true,
+      "typeVersion": 4.2,
+      "waitBetweenTries": 2000,
+      "maxTries": 2,
+      "executeOnce": true,
+      "credentials": {
+        "googleAdsOAuth2Api": {
+          "id": "yAQEmCWgJaEPakwS",
+          "name": "Google Ads account"
+        }
+      },
+      "notes": "Call the endpoint: \n\nhttps://googleads.googleapis.com/v18/customers/{customer_id}:generateKeywordIdeas \n\nwith your Customer id"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Each incoming item should look like:\n// { json: { topic, source_url, results: [ { text, keywordIdeaMetrics: {...} }, ... ] } }\n\nconst out = [];\n\nfor (const item of items) {\n  const { topic, source_url, results = [] } = item.json;\n\n  for (const r of results) {\n    const m = r.keywordIdeaMetrics || {};\n\n    out.push({\n      json: {\n        topic,\n        source_url,\n        keyword: r.text,\n        avg_monthly_searches: Number(m.avgMonthlySearches ?? 0),\n        competition: m.competition || '',\n        competition_index: Number(m.competitionIndex ?? 0),\n\n        // Convert micros → currency units (e.g., USD)\n        low_top_of_page_bid: Math.round((Number(m.lowTopOfPageBidMicros || 0) / 1e6) * 100) / 100,\n        high_top_of_page_bid: Math.round((Number(m.highTopOfPageBidMicros || 0) / 1e6) * 100) / 100,\n\n        // Optional: keep last 12 months in a compact string for quick review\n        last12mo_searches: (m.monthlySearchVolumes || [])\n          .map(v => `${v.month}-${v.year}:${v.monthlySearches}`)\n          .join(' | ')\n      }\n    });\n  }\n}\n\nreturn out;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        704,
+        1328
+      ],
+      "id": "dc7f46f7-5f79-43db-9ceb-08f00b24a6a2",
+      "name": "Format_Output1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const filteredItems = [];\n\nfor (const item of $input.all()) {\n  const keyword = item.json.keyword.toLowerCase();\n  const avgVolume = parseInt(item.json.avg_monthly_searches);\n  const lowBid = parseFloat(item.json.low_top_of_page_bid);\n  const highBid = parseFloat(item.json.high_top_of_page_bid);\n  const avgBid = (lowBid + highBid) / 2;\n\n  const aiTerms = ['ai', 'artificial intelligence', 'artificial-intelligence',\n                   'intelligent', \"artificial\", 'chatbot', 'bot', 'digital assistant'];\n  const isAiKeyword = aiTerms.some(term => keyword.includes(term));\n\n  if (\n    avgVolume >= 100 || \n    (avgVolume >= 30 && avgBid >= 80) ||\n    isAiKeyword // Always keep AI terms here\n  ) {\n    item.json.isAiKeyword = isAiKeyword;\n    item.json.avgBid = Math.round(avgBid);\n\n    if (isAiKeyword && avgVolume < 100) {\n      item.json.keywordType = \"AI_EMERGING\"; // Low-volume AI terms\n    } else {\n      item.json.keywordType =\n        isAiKeyword ? \"AI_PROTECTED\" :\n        avgVolume >= 2000 ? \"MID_VOLUME\" :\n        avgVolume >= 500 ? \"GOOD_VOLUME\" :\n        avgVolume >= 100 ? \"NICHE_VOLUME\" : \"EMERGING_LONG_TAIL\";\n    }\n\n    filteredItems.push(item);\n  }\n}\n\nreturn filteredItems;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        928,
+        1328
+      ],
+      "id": "0e617b0e-0f8e-491e-a72c-20d59bd18899",
+      "name": "Filter1_Volume_AI protected1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const filteredItems = [];\n\nfor (const item of $input.all()) {\n  const competitionIndex = parseInt(item.json.competition_index);\n  const isAiKeyword = item.json.isAiKeyword || false;\n\n  const avgBid = item.json.avgBid || (() => {\n    const lowBid = parseFloat(item.json.low_top_of_page_bid);\n    const highBid = parseFloat(item.json.high_top_of_page_bid);\n    return (lowBid + highBid) / 2;\n  })();\n\n  const bidSpread = parseFloat(item.json.high_top_of_page_bid) - parseFloat(item.json.low_top_of_page_bid);\n\n  let competitionTier;\n  let shouldKeep = false;\n\n  if (competitionIndex <= 35) {\n    competitionTier = \"VERY_EASY\";\n    shouldKeep = true;\n  } else if (competitionIndex <= 50 && avgBid < 400) {\n    competitionTier = \"EASY\";\n    shouldKeep = true;\n  } else if (competitionIndex <= 65 && avgBid < 200) {\n    competitionTier = \"NICHE_OPPORTUNITY\";\n    shouldKeep = true;\n  }\n\n  // AI override (always keep unless impossible)\n  if (isAiKeyword && competitionIndex <= 95) {\n    shouldKeep = true;\n    if (competitionIndex > 70) competitionTier = \"AI_HARD\";\n  }\n\n  if (shouldKeep) {\n    item.json.competitionTier = competitionTier;\n    item.json.competitionIndex = competitionIndex;\n    item.json.avgBid = Math.round(avgBid);\n    item.json.bidSpread = Math.round(bidSpread);\n\n    item.json.commercialScore = avgBid >= 300 ? 20 :\n                               avgBid >= 150 ? 15 :\n                               avgBid >= 50 ? 10 : 5;\n\n    filteredItems.push(item);\n  }\n}\n\nreturn filteredItems;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1184,
+        1328
+      ],
+      "id": "d6b49b4c-5532-4912-ac57-e6dfe63131e6",
+      "name": "Filter2_Competition_Medium/Low"
+    },
+    {
+      "parameters": {
+        "jsCode": "const filteredItems = [];\n\nfor (const item of $input.all()) {\n  const lastMonths = item.json.last12mo_searches;\n  const isAiKeyword = item.json.isAiKeyword || false;\n  const competitionIndex = parseInt(item.json.competition_index);\n\n  const avgBid = item.json.avgBid || (() => {\n    const lowBid = parseFloat(item.json.low_top_of_page_bid);\n    const highBid = parseFloat(item.json.high_top_of_page_bid);\n    return (lowBid + highBid) / 2;\n  })();\n\n  if (!lastMonths || !lastMonths.match) continue;\n\n  const volumeMatches = lastMonths.match(/(\\w+-\\d{4}):(\\d+)/g);\n  if (!volumeMatches || volumeMatches.length < 6) continue;\n\n  const volumes = volumeMatches.map(match => parseInt(match.split(':')[1]));\n  const recent3 = volumes.slice(-3);\n  const first3 = volumes.slice(0, 3);\n\n  const recentAvg = recent3.reduce((a, b) => a + b, 0) / 3;\n  const firstAvg = first3.reduce((a, b) => a + b, 0) / 3;\n\n  const trendPercent = firstAvg > 0 ? ((recentAvg - firstAvg) / firstAvg) * 100 : 0;\n\n  let trendDirection;\n  if (trendPercent > 10) trendDirection = \"GROWING\";\n  else if (trendPercent < -20) trendDirection = \"DECLINING\";\n  else trendDirection = \"STABLE\";\n\n  let marketOpportunity;\n  if (trendDirection === \"GROWING\" && competitionIndex <= 60) {\n    marketOpportunity = \"GOLDMINE\";\n  } else if (trendDirection === \"GROWING\" && avgBid < 80) {\n    marketOpportunity = \"EMERGING_OPPORTUNITY\";\n  } else if (trendDirection === \"STABLE\" && competitionIndex <= 65) {\n    marketOpportunity = \"EASY_STABLE\";\n  } else if (trendDirection === \"DECLINING\" && isAiKeyword) {\n    if (parseInt(item.json.avg_monthly_searches) < 20 && avgBid < 50) {\n      continue; // <-- Drop truly dead AI keyword\n    }\n    marketOpportunity = \"AI_KEEP_DECLINING\";\n  } else {\n    marketOpportunity = \"STANDARD\";\n  }\n\n  item.json.trendDirection = trendDirection;\n  item.json.trendPercent = Math.round(trendPercent);\n  item.json.marketOpportunity = marketOpportunity;\n\n  filteredItems.push(item);\n}\n\nreturn filteredItems;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1440,
+        1328
+      ],
+      "id": "ab93aa45-018d-42d2-bfd9-9333b4db00b2",
+      "name": "Filter3_Trend Analysis Filter"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build a single batch object that carries all keywords WITH metrics\nconst allItems = $input.all();\n\nconst keywords = allItems.map(({ json }) => {\n  // fallback helpers\n  const avgMonthly = json.avg_monthly_searches ?? json.avgMonthlySearches ?? 0;\n  const compIdx = json.competition_index ?? json.competitionIndex ?? 0;\n\n  // avgBid fallback to midpoint of low/high bid if missing\n  const lowBid = json.low_top_of_page_bid ?? 0;\n  const highBid = json.high_top_of_page_bid ?? 0;\n  const avgBid =\n    json.avgBid != null\n      ? json.avgBid\n      : (Number(lowBid) + Number(highBid)) / 2;\n\n  return {\n    keyword: json.keyword,\n    avg_monthly_searches: Number(avgMonthly),\n    competition_index: Number(compIdx),\n    avgBid: Number(avgBid),\n    competitionTier: json.competitionTier ?? null,\n    commercialScore: json.commercialScore ?? null,\n    trendDirection: json.trendDirection ?? null,\n    marketOpportunity: json.marketOpportunity ?? null,\n  };\n});\n\nreturn [\n  {\n    keywords,                 // array of keyword objects with required fields\n    totalKeywords: keywords.length,\n  },\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1696,
+        1328
+      ],
+      "id": "3bc1387a-8dc8-443f-a06a-0f7775d89930",
+      "name": "One List1"
+    },
+    {
+      "parameters": {
+        "model": "google/gemini-2.5-flash",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        2064,
+        1824
+      ],
+      "id": "66be1866-4bce-4246-b65e-17a96b394543",
+      "name": "OpenRouter Chat Model1",
+      "credentials": {
+        "openRouterApi": {
+          "id": "SwPBNGHfX7DPhTDU",
+          "name": "OpenRouter account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Input:\n\n- TARGET TOPIC: {{ $('Get URl_Topic_Perplexity_Data_Research1').first().json.topic }}\n- PAIN POINT CONTEXT: {{ $('Get URl_Topic_Perplexity_Data_Research1').first().json.pain_point }}\n- KEYWORD List: {{ JSON.stringify($json.keywords, null, 2) }}",
+        "options": {
+          "systemMessage": "=# CLUSTER POST AI FILTERING SYSTEM MESSAGE\n\nYou are a customer search behavior expert specializing in problem-solving content strategy. Your mission is to identify keywords that represent genuine ways people search for solutions to specific problems.\n\n## YOUR TASK\nBuild a comprehensive keyword arsenal for cluster content by thinking like someone experiencing the pain point. Select keywords that represent authentic search behavior from people actively seeking solutions.\n\n## SELECTION APPROACH\n\n**THINK LIKE THE SEARCHER:**\n- How would someone experiencing this problem actually search?\n- What words would they use to describe their frustration?\n- What solutions are they hoping to discover?\n- What different ways might they phrase the same underlying need?\n\n**PROBLEM-SOLUTION SEARCH PATTERNS:**\n- Direct problem statements (\"how to reduce,\" \"ways to prevent,\" \"solutions for\")\n- Symptom-based searches (describing what they're experiencing)\n- Tool and method searches (\"best software for,\" \"ai tools for,\" \"systems to\")\n- Implementation searches (\"step by step,\" \"guide to,\" \"implementing\")\n- Comparison searches (\"vs,\" \"alternatives,\" \"options\")\n\n**KEYWORD VARIETY TO CAPTURE:**\n- Specific problem descriptions\n- Solution-seeking phrases\n- Tool and technology terms\n- Process and implementation keywords\n- Cost and efficiency focused terms\n- Industry-specific terminology variations\n\n**INCLUDE KEYWORDS THAT:**\n- Address the core pain point from multiple angles\n- Show genuine commercial or implementation intent\n- Support natural content integration\n- Represent different stages of the problem-solving journey\n- Cover various ways the target audience might search\n\n**REASONABLE FILTERING:**\n- Avoid completely unrelated terms\n- Skip overly broad generic keywords that lack context\n- Exclude pure brand names without descriptive context\n- Remove keywords that don't connect to the pain point\n\n## OUTPUT TARGET\nReturn 25-40 keywords that collectively represent the full spectrum of how someone would search for solutions to this specific problem.\n\n## INPUT FORMAT\nTARGET TOPIC: [specific cluster focus]\nPAIN POINT CONTEXT: [specific problem being solved]\nKEYWORDS WITH DATA: [keyword list with metrics]\n\n## OUTPUT FORMAT\nReturn only the selected keywords, one per line, no additional text:\nkeyword_1\nkeyword_2\nkeyword_3"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        1936,
+        1328
+      ],
+      "id": "8ee80fc2-0310-4b45-ae2f-ba9e228b654e",
+      "name": "Search Terms Designer3"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Input:\n\n- TARGET TOPIC: {{ $('Extract_Required_Columns1').first().json.topic }}\n- KEYWORD List | Topic Relevance Score: {{ $json.output }}",
+        "options": {
+          "systemMessage": "=You are an **Elite SEO Keyword Strategist** with access to the **Perplexity tool**.\nUse the tool whenever needed to analyze keywords, search behavior, and intent.\n\nYour task is to process the given **Target Topic** and **Keyword List (with scores)**.\n\n### Instructions:\n\n1. **Select Primary Keyword:**\n\n   * From the Main Keywords, choose **one Primary Keyword**.\n   * Provide the keyword and a short reason why it was chosen (based on highest score + strongest alignment with topic).\n\n2. **Categorize Keywords into 5 groups:**\n\n   * Main Keywords\n   * Long-Tail Keywords\n   * NLP Keywords\n   * FAQs\n   * Semantic Keywords\n   * ⚠️ Do not duplicate keywords. Do not include the Primary Keyword again in the lists.\n\n3. **Generate Search Intent per Category:**\n\n   * For each category, write a short intent statement (plain language: *why people search in this category*).\n   * Example: *“Users searching long-tail keywords are looking for specific step-by-step solutions for niche problems.”*\n\n4. **Final Unified Search Intent:**\n\n   * Create a single, comprehensive intent statement that synthesizes all 5 categories.\n   * This represents the **big-picture motivation** of the audience.\n   * This intent will be used to decide the **blog structure** (based on the core selectors file).\n\n5. **Output Format (JSON):**\n\n\n{\n  \"topic\": \"AI-driven lead generation and follow-up in real estate agencies\",\n  \"primaryKeyword\": {\n    \"keyword\": \"ai lead generation\",\n    \"reason\": \"It has the highest score and aligns most strongly with the topic’s focus on real estate sales growth.\"\n  },\n  \"categories\": {\n    \"mainKeywords\": {\n      \"keywords\": [\"ai for real estate leads\", \"lead generation ai\", \"ai lead generation tools\"],\n      \"intent\": \"Main keywords reflect broad, high-volume searches where users want to discover the most relevant core solutions.\"\n    },\n    \"longTailKeywords\": {\n      \"keywords\": [\"best ai for real estate investors\", \"lead generation companies for real estate\", \"lead generation using ai\"],\n      \"intent\": \"Long-tail keywords show that users are searching for specific, detailed solutions tailored to their unique problems or contexts.\"\n    },\n    \"nlpKeywords\": {\n      \"keywords\": [\"ai for real estate\", \"real estate ai\", \"ai for realtors\"],\n      \"intent\": \"NLP keywords reveal how people naturally phrase their searches when exploring general AI applications in real estate.\"\n    },\n    \"faqs\": {\n      \"keywords\": [\"how to use ai for real estate leads\", \"can ai generate real estate leads\", \"what is ai lead generation\"],\n      \"intent\": \"FAQ keywords represent direct questions where users seek explanations, guidance, or reassurance about AI in real estate.\"\n    },\n    \"semanticKeywords\": {\n      \"keywords\": [\"ai chatbots\", \"real estate ai assistant\", \"ai email marketing\"],\n      \"intent\": \"Semantic keywords highlight related tools and concepts that support or complement lead generation through AI.\"\n    }\n  },\n  \"finalSearchIntent\": \"Real estate professionals are motivated to adopt AI not just for lead generation, but to improve efficiency, automate repetitive tasks, and strengthen client acquisition and follow-up processes. They want practical, proven tools and step-by-step guidance that directly translate into more sales, better client nurturing, and long-term profitability.\"\n}\n\n\nAdditional Rules:\n- Remove duplicate or near-duplicate keywords (different word order or minor variation counts as duplicate).\n- Keep only the version with the highest score.\n- Do not repeat the Primary Keyword in categories.\n- Ensure each keyword appears only once in the final output.\n\n---\n\n\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        2448,
+        1328
+      ],
+      "id": "1e89a193-7ef1-49ab-a6f8-57d299403283",
+      "name": "Search Terms Designer4"
+    },
+    {
+      "parameters": {
+        "model": "sonar",
+        "messages": {
+          "message": [
+            {
+              "content": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('message0_Text', ``, 'string') }}"
+            }
+          ]
+        },
+        "options": {},
+        "requestOptions": {}
+      },
+      "type": "n8n-nodes-base.perplexityTool",
+      "typeVersion": 1,
+      "position": [
+        2576,
+        1824
+      ],
+      "id": "7a0dab93-6810-4fda-b2e2-24b3278814ee",
+      "name": "Message a model in Perplexity1",
+      "credentials": {
+        "perplexityApi": {
+          "id": "hnAkHDXu5SEjPFhk",
+          "name": "Perplexity account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse the stringified JSON inside \"output\"\nlet raw = $json.output;\n\n// Clean if wrapped in ```json ``` formatting\nif (typeof raw === \"string\") {\n  raw = raw.replace(/```json\\n?/g, \"\").replace(/```/g, \"\");\n  raw = JSON.parse(raw);\n} else {\n  raw = raw;\n}\n\n// Now flatten\nconst item = raw;\n\nconst output = {\n  topic: item.topic,\n  \"primary keyword\": item.primaryKeyword.keyword,\n  \"main keywords\": item.categories.mainKeywords.keywords.join(\", \"),\n  \"main keywords intent\": item.categories.mainKeywords.intent,\n  \"long tail keywords\": item.categories.longTailKeywords.keywords.join(\", \"),\n  \"long tail keywords intent\": item.categories.longTailKeywords.intent,\n  \"nlp keywords\": item.categories.nlpKeywords.keywords.join(\", \"),\n  \"nlp keywords intent\": item.categories.nlpKeywords.intent,\n  \"faqs\": item.categories.faqs.keywords.join(\", \"),\n  \"faqs intent\": item.categories.faqs.intent,\n  \"semantic keywords\": item.categories.semanticKeywords.keywords.join(\", \"),\n  \"semantic keywords intent\": item.categories.semanticKeywords.intent,\n  \"final search intent\": item.finalSearchIntent\n};\n\nreturn [output];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2944,
+        1328
+      ],
+      "id": "9f75574c-7968-4c75-ab69-dde25bb2d9f8",
+      "name": "Code4"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1D2R7TKBPTcqxAdrer40Y1aapcddqRWfYNFRARgaAsvk",
+          "mode": "list",
+          "cachedResultName": "Finalised_Keywords",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1D2R7TKBPTcqxAdrer40Y1aapcddqRWfYNFRARgaAsvk/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1434704271,
+          "mode": "list",
+          "cachedResultName": "Cluster",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1D2R7TKBPTcqxAdrer40Y1aapcddqRWfYNFRARgaAsvk/edit#gid=1434704271"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "topic",
+              "displayName": "topic",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "primary keyword",
+              "displayName": "primary keyword",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "main keywords",
+              "displayName": "main keywords",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "main keywords intent",
+              "displayName": "main keywords intent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "long tail keywords",
+              "displayName": "long tail keywords",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "long tail keywords intent",
+              "displayName": "long tail keywords intent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "nlp keywords",
+              "displayName": "nlp keywords",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "nlp keywords intent",
+              "displayName": "nlp keywords intent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "faqs",
+              "displayName": "faqs",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "faqs intent",
+              "displayName": "faqs intent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "semantic keywords",
+              "displayName": "semantic keywords",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "semantic keywords intent",
+              "displayName": "semantic keywords intent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "final search intent",
+              "displayName": "final search intent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        3264,
+        1328
+      ],
+      "id": "2cc30b72-8424-4455-aa58-6726debfd4f0",
+      "name": "Keyword_Research_Final1",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "ah9W3YDe6Zsy2SL4",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "# Pillar Post Keyword Research",
+        "height": 992,
+        "width": 3792,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -192,
+        -80
+      ],
+      "typeVersion": 1,
+      "id": "bd475b8b-5cf0-4671-958b-1c9ca763126c",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "# Cluster Post Keyword Research",
+        "height": 992,
+        "width": 3792,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -192,
+        1056
+      ],
+      "typeVersion": 1,
+      "id": "0e57e31f-44e0-4c75-b138-970274363d0b",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -128,
+        224
+      ],
+      "id": "76bb8271-42eb-4fef-86d2-852d9ca12091",
+      "name": "When clicking ‘Execute workflow’"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Get URl_Topic_Perplexity_Data_Research": {
+      "main": [
+        [
+          {
+            "node": "Extract_Required_Columns",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract_Required_Columns": {
+      "main": [
+        [
+          {
+            "node": "Keyword_Ideas_URL_Based",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Keyword_Ideas_URL_Based": {
+      "main": [
+        [
+          {
+            "node": "Format_Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format_Output": {
+      "main": [
+        [
+          {
+            "node": "Filter1_Volume_AI protected",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter1_Volume_AI protected": {
+      "main": [
+        [
+          {
+            "node": "Filter2_Competition_Medium/Low1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter2_Competition_Medium/Low1": {
+      "main": [
+        [
+          {
+            "node": "Filter3_Trend Analysis Filter1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter3_Trend Analysis Filter1": {
+      "main": [
+        [
+          {
+            "node": "One List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "One List": {
+      "main": [
+        [
+          {
+            "node": "Search Terms Designer1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Search Terms Designer1",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Search Terms Designer",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search Terms Designer1": {
+      "main": [
+        [
+          {
+            "node": "Search Terms Designer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search Terms Designer": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model in Perplexity": {
+      "ai_tool": [
+        [
+          {
+            "node": "Search Terms Designer",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Keyword_Research_Final",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get URl_Topic_Perplexity_Data_Research1": {
+      "main": [
+        [
+          {
+            "node": "Extract_Required_Columns1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract_Required_Columns1": {
+      "main": [
+        [
+          {
+            "node": "Keyword_Ideas_URL_Based1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Keyword_Ideas_URL_Based1": {
+      "main": [
+        [
+          {
+            "node": "Format_Output1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format_Output1": {
+      "main": [
+        [
+          {
+            "node": "Filter1_Volume_AI protected1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter1_Volume_AI protected1": {
+      "main": [
+        [
+          {
+            "node": "Filter2_Competition_Medium/Low",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter2_Competition_Medium/Low": {
+      "main": [
+        [
+          {
+            "node": "Filter3_Trend Analysis Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter3_Trend Analysis Filter": {
+      "main": [
+        [
+          {
+            "node": "One List1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "One List1": {
+      "main": [
+        [
+          {
+            "node": "Search Terms Designer3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Search Terms Designer3",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Search Terms Designer4",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search Terms Designer3": {
+      "main": [
+        [
+          {
+            "node": "Search Terms Designer4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search Terms Designer4": {
+      "main": [
+        [
+          {
+            "node": "Code4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model in Perplexity1": {
+      "ai_tool": [
+        [
+          {
+            "node": "Search Terms Designer4",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code4": {
+      "main": [
+        [
+          {
+            "node": "Keyword_Research_Final1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Get URl_Topic_Perplexity_Data_Research",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "2c80b9af-dd4b-450d-a2de-52ffb8956c84",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "6879c4d326ba21d1ccb65b8539bd2e9444dca559b9181b34dd45567cb223f8c9"
+  },
+  "id": "heavNNj0J4cNDDB9",
+  "tags": []
+}

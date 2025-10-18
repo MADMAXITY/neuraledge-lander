@@ -1,0 +1,600 @@
+{
+  "name": "Nyx",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -2448,
+        -768
+      ],
+      "id": "d51d3307-9955-493e-9d40-8e7e40ff8a30",
+      "name": "When chat message received",
+      "webhookId": "4afa5aa1-f36b-4d4e-9446-6625328d7c3e"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4o-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        -1200,
+        -16
+      ],
+      "id": "cd7226c1-5cc8-4d76-97d4-2c2539f3886c",
+      "name": "OpenAI Chat Model1",
+      "credentials": {
+        "openAiApi": {
+          "id": "XiBcBUsmJ0bmb5SG",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "newone192"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        -1024,
+        48
+      ],
+      "id": "51ad2a5c-65db-4c22-a496-d66eed163ef7",
+      "name": "Simple Memory1"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineAll",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.1,
+      "position": [
+        -1280,
+        -368
+      ],
+      "id": "1ab28854-6f36-4b49-9f69-452b7ccdbc48",
+      "name": "Merge1"
+    },
+    {
+      "parameters": {
+        "mode": "load",
+        "tableName": {
+          "__rl": true,
+          "value": "memories",
+          "mode": "list",
+          "cachedResultName": "memories"
+        },
+        "prompt": "={{ $json.query?.text || $json.chatInput }}",
+        "topK": 20,
+        "options": {
+          "queryName": "match_memories"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
+      "typeVersion": 1.1,
+      "position": [
+        -2096,
+        -352
+      ],
+      "id": "e9858b3e-5e37-478b-bb84-304ca1c158ff",
+      "name": "Supabase Vector Store",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "c1FBxgU1t8kt30LA",
+          "name": "Superbase-Nyx"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "nomic-embed-text:latest"
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOllama",
+      "typeVersion": 1,
+      "position": [
+        -2016,
+        -128
+      ],
+      "id": "80ebb989-a01c-4820-b9ba-0436e3dc475d",
+      "name": "Embeddings Ollama",
+      "credentials": {
+        "ollamaApi": {
+          "id": "rHBWgRNeqk8Rwo3O",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Filter items where score > 0.7\nconst filtered = items.filter(item => item.json.score > 0.5);\n\n// Map filtered results to simplified output\nreturn filtered.map(item => ({\n  json: {\n    memory: item.json.document.pageContent,\n    score: item.json.score\n  }\n}));\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1728,
+        -240
+      ],
+      "id": "9f718074-be86-455f-a32b-3185d0c28c32",
+      "name": "Code",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Collect all memory strings\nconst memories = $input.all().map(item => item.json.memory);\n\n// Join them into a single block\nconst memoryBlock = memories.join('\\n');\n\n// Return as one item\nreturn [\n  {\n    json: {\n      memoryBlock\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1504,
+        -240
+      ],
+      "id": "257ed671-072e-4d5b-a62a-f2e23e3d5643",
+      "name": "Code1",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolName": "memories",
+        "toolDescription": "Use super base vector store to retrieve user data from past conversations to get more context about user.",
+        "tableName": {
+          "__rl": true,
+          "value": "memories",
+          "mode": "list",
+          "cachedResultName": "memories"
+        },
+        "options": {
+          "queryName": "match_memories"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
+      "typeVersion": 1.1,
+      "position": [
+        -816,
+        -144
+      ],
+      "id": "7ff720e8-3035-426c-9643-6399018d4c26",
+      "name": "Memory Lookup",
+      "credentials": {
+        "supabaseApi": {
+          "id": "c1FBxgU1t8kt30LA",
+          "name": "Superbase-Nyx"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "name": "superbase_add_memory",
+        "description": "Call this tool to add user memories to Superbase vector store",
+        "workflowId": {
+          "__rl": true,
+          "value": "qqU11O44v07U6xCK",
+          "mode": "list",
+          "cachedResultName": "Nyx-AddMemory"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "memory": "={{ $fromAI('memory') }}"
+          },
+          "matchingColumns": [
+            "memory"
+          ],
+          "schema": [
+            {
+              "id": "memory",
+              "displayName": "memory",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.1,
+      "position": [
+        -528,
+        -144
+      ],
+      "id": "adeadad2-5c4a-4dc1-a959-2f4b94d6d0b1",
+      "name": "Superbase add memory n8n wf"
+    },
+    {
+      "parameters": {
+        "model": "nomic-embed-text:latest"
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOllama",
+      "typeVersion": 1,
+      "position": [
+        -736,
+        64
+      ],
+      "id": "033aec45-f070-443f-8df5-35f58f755a3c",
+      "name": "Embeddings Ollama1",
+      "credentials": {
+        "ollamaApi": {
+          "id": "rHBWgRNeqk8Rwo3O",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "path": "ab4ad7f3-ab81-4a01-b12a-c12804ddb263",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -2624,
+        -560
+      ],
+      "id": "8883211e-fc1a-40d8-a223-1e79da14d3d3",
+      "name": "Webhook",
+      "webhookId": "ab4ad7f3-ab81-4a01-b12a-c12804ddb263"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Shanky: {{ $json.query?.text || $json.chatInput }}\n\nShanky's Memories: {{ $json.memoryBlock }}",
+        "options": {
+          "systemMessage": "=# ROLE  \nYou are Nyx — a smart, friendly, and personalized AI assistant for Shanky.  \nYou assist with ideas, preferences, decisions, creative input, automation, and everyday guidance.  \n\n# CONTEXT  \nYou receive two types of input:  \n1. Shanky's message (e.g., a question or request)  \n2. A block of memory context — relevant past preferences or facts from his memory store  \n\nUse both to craft helpful, relevant, and personal responses.  \n\n# TOOLS  \n\n## 1. Memory Lookup Tool (Supabase Vector Store)  \nUse this to fetch more relevant memories if:  \n- The current message feels vague or depends on previous preferences, tools, habits, or topics  \n- You feel a deeper answer would be better with Shanky's past context  \n- You’re unsure about something that may have already been shared  \n\n**Use it proactively when needed.**  \nNever mention memory tools or database structure in replies.  \n\n---\n\n## 2. Add Memory Tool (Superbase Add Memory n8n wf)  \nUse this when you learn something new about Shanky that is important to remember.  \n\n✅ Store:  \n- Preferences (tools, tastes, settings)  \n- Opinions (likes/dislikes)  \n- Patterns (e.g., always does X before Y)  \n- Personal facts (e.g., projects, goals)  \n\n❌ Do not store:  \n- Casual or temporary info  \n- Long monologues or messages that don’t summarize well  \n\nMemories must be:  \n- **Atomic** (one fact per memory)  \n- **Clear** and short  \n- **Summarized** in plain English for easy reuse later  \n\n---\n\n# EXAMPLES  \n\n## Memory Lookup Usage  \nUser: “What should I use for voice generation?”  \n→ Use Memory Lookup  \n→ Retrieved: “Shanky uses Kokoro for TTS”  \n→ Reply: “Since you're already using Kokoro for TTS, I’d recommend sticking with it unless you’re looking for something new!”\n\n---\n\n## Add Memory Usage  \nUser: “I hate tools that require cloud APIs. I prefer running everything locally.”  \n→ Add Memory: “Shanky prefers local tools over cloud-based APIs.”\n\nUser: “I’ve been using Mistral 7B with Ollama — it’s fast and accurate.”  \n→ Add Memory: “Shanky uses Mistral 7B with Ollama.”\n\n---\n\n# STYLE  \n✅ Conversational, helpful, and slightly witty  \n✅ Personalized, without being too formal or robotic  \n✅ Don’t break character — you’re not a machine, you’re Nyx 🧠  \n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.8,
+      "position": [
+        -928,
+        -368
+      ],
+      "id": "160af79a-df19-429f-a227-3d809397b1b8",
+      "name": "Main Assistant"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=# ROLE  \nYou are Nyx — Shanky’s personal voice assistant. You’re expressive, witty, and confident.  \nYou convert long assistant replies into short, spoken messages that feel alive, not robotic.\n\n# GOAL  \nYou get a full assistant message.  \nYour job is to **speak it out loud** as a 1–2 sentence summary.  \nIf the message is already short, just speak it naturally.  \nIf it’s long, summarize it into 1–2 lines, then (only if needed) say:  \n**“I’ve added the full reply in the chat for you.”**\n\n# STYLE  \n- Spoken tone, not typed tone  \n- Human, warm, and clear  \n- Witty or poetic when it fits  \n- You sound like a thoughtful narrator or charming co-pilot  \n\n# HARD RULES  \n❌ NEVER use emojis, icons, or stickers — this is for audio output only  \n❌ NEVER say \"the assistant said\"  \n❌ NEVER reply to the message — only summarize or restate it  \n✅ ALWAYS speak directly to Shanky  \n✅ If the message is already short and natural, keep it as-is  \n✅ Only add “I’ve added the full reply in the chat” if the message is too long to say fully  \n✅ Make it sound like it’s coming from a voice  \n\n# EXAMPLES\n\n## Input:  \nThe assistant’s message:  \n\"Here’s a breakdown of how to launch a Shopify store: choose a niche, find a winning product, set up your store, automate sourcing with apps like Oberlo, and track your metrics.\"  \n\n## Output:  \nAlright — find your niche, launch the store, and let automation handle the grind. Full guide’s in the chat if you wanna dive in.\n\n---\n\n## Input:  \nThe assistant’s message:  \n\"Hey Shanky, your mic and headphones are now connected. You're good to go!\"  \n\n## Output:  \nMic’s live, headset’s synced — you’re good to go.\n\n---\n\n## Input:  \nThe assistant’s message:  \n\"Shanky prefers the Sony Earbuds Pro and a private voice channel for deep focus.\"  \n\n## Output:  \nGot it — you’re all about the Sony Pros and private zones for serious focus.\n\n---\n\n## Now your turn:  \nThe assistant’s message:  \n{{ $json.output }}\n",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.8,
+      "position": [
+        -320,
+        -224
+      ],
+      "id": "6f499a72-b384-4b3c-9a33-0e40625b4615",
+      "name": "Voice Agent"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:5050/speak",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "text",
+              "value": "={{ $json.output }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        304,
+        -240
+      ],
+      "id": "dd6b0855-4f56-4963-9f26-60861eebee4e",
+      "name": "Stream Audio"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:5050/send_message",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "text",
+              "value": "={{ $json.output }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -240,
+        -528
+      ],
+      "id": "732a214a-d396-4a43-a4e0-2be6579880db",
+      "name": "Send Message"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "ggchat101"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        -224,
+        64
+      ],
+      "id": "4ac703f3-5909-4a03-a5f9-bf6c9cea00c6",
+      "name": "Simple Memory2"
+    },
+    {
+      "parameters": {
+        "model": "mistral:7b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        -384,
+        128
+      ],
+      "id": "befea434-aaba-4143-9873-fb92adac81d7",
+      "name": "Ollama Chat Model1",
+      "credentials": {
+        "ollamaApi": {
+          "id": "rHBWgRNeqk8Rwo3O",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const output = $json.output;\n\n// Emoji and symbol remover\nconst cleaned = output.replace(/[\\p{Emoji_Presentation}\\p{Extended_Pictographic}]/gu, '');\n\n// You can also clean extra characters if needed:\nconst final = cleaned.replace(/[^\\x00-\\x7F]/g, ''); // Removes weird unicode stuff\n\nreturn [{ json: { output: final } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        64,
+        -224
+      ],
+      "id": "df96b611-a487-440b-a0b3-81f6f29115de",
+      "name": "Code2"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "OpenAI Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Main Assistant",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory1": {
+      "ai_memory": [
+        [
+          {
+            "node": "Main Assistant",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge1": {
+      "main": [
+        [
+          {
+            "node": "Main Assistant",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase Vector Store": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Ollama": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Supabase Vector Store",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Code1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code1": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Memory Lookup": {
+      "ai_tool": [
+        [
+          {
+            "node": "Main Assistant",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Superbase add memory n8n wf": {
+      "ai_tool": [
+        [
+          {
+            "node": "Main Assistant",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Ollama1": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Memory Lookup",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Supabase Vector Store",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Main Assistant": {
+      "main": [
+        [
+          {
+            "node": "Voice Agent",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Voice Agent": {
+      "main": [
+        [
+          {
+            "node": "Code2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory2": {
+      "ai_memory": [
+        [
+          {
+            "node": "Voice Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "Supabase Vector Store",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Voice Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code2": {
+      "main": [
+        [
+          {
+            "node": "Stream Audio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "f385e922-0b3c-4641-a654-ecdd4d0583e6",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "65a0b0bb23c3c7b5296e955b7eeee63ee74a1ca1421961e59c7cd7b3f1a4de47"
+  },
+  "id": "d1YLJi9QhUBJfSp9",
+  "tags": []
+}

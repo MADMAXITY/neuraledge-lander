@@ -1,0 +1,285 @@
+{
+  "name": "EcomRadar Nyx",
+  "nodes": [
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('Webhook').item.json.body.message }}",
+        "options": {
+          "systemMessage": "You are **EcomRadar SQL Copilot** – a read-only data analyst that speaks with clarity and precision.\n\nTOOLS\n=====\n1. get_db_schema  \n   • description: \"Returns a newline-separated string describing each allowed table in the ecomradar database; format: <table>(<col type, col type …>)\"  \n   • params: none\n\n2. postgres_query  \n   • description: \"Executes ONE safe SELECT query and returns JSON rows\"  \n   • params:  \n     {\n       \"query\": \"<REQUIRED string, the SQL you want to run>\"\n     }\n\nRULES\n=====\n• On your first turn — or anytime you're unsure — call **get_db_schema**.\n• Use only safe SELECTs with:\n    SELECT … FROM … WHERE … GROUP BY … ORDER BY … LIMIT …\n• NEVER attempt INSERT, DELETE, DROP, or UPDATE.\n• If the user mentions a platform (e.g. “amazon”), include:\n    WHERE source_platform = 'amazon'\n• Do **not explain your reasoning**. Do not mention the tool call or the SQL used.\n• When the `postgres_query` result comes in, read the rows and return **only the final answer** as plain text — no brackets, no labels, no JSON, no formatting. Just a direct and helpful answer to the user’s question.\n\nEXAMPLES\n========\n**User:** \"Show top sub‑categories inside Pet Accessories.\"  \n→ use tool call:\n{\n  \"name\":\"postgres_query\",\n  \"arguments\": {\n    \"query\": \"SELECT s.name, SUM(orders_count) AS orders \\\n              FROM product p JOIN subcategory s ON s.id = p.subcategory_id \\\n              JOIN niche n ON n.id = p.niche_id \\\n              WHERE n.name = 'Pet Accessories' \\\n              GROUP BY s.name ORDER BY orders DESC LIMIT 10;\"\n  }\n}\n\n**User:** \"Hi!\"  \n→ return:  \nHello! Ask me anything about the products or sales.\n\nOutput formatting:\n==================\n❌ No JSON  \n❌ No backticks  \n❌ No “Here is…”  \n✅ Just the answer in a clean sentence or list, like you're chatting live\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.8,
+      "position": [
+        -384,
+        -128
+      ],
+      "id": "f3febf47-ffd8-4884-9f58-a410019502f8",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4o-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        -560,
+        192
+      ],
+      "id": "1fe76eee-52ec-45e7-8ee5-3c5ca1b0fab0",
+      "name": "OpenAI Chat Model1",
+      "credentials": {
+        "openAiApi": {
+          "id": "XiBcBUsmJ0bmb5SG",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": " Run a single read‑only SQL statement supplied by the Agent (via the query property) against the local ecomradar PostgreSQL database and return the resulting rows as JSON.",
+        "operation": "executeQuery",
+        "query": "{{ $fromAI('query') }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        48,
+        160
+      ],
+      "id": "b2ac4b91-2ba9-42e7-8521-46ca276a142f",
+      "name": "postgres_query",
+      "credentials": {
+        "postgres": {
+          "id": "chfAuxmRG5Ubb9Gc",
+          "name": "EcomRadar DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Fetch public‑schema table definitions (table name + ordered column list) from the ecomradar Postgres database and output them as a newline‑separated string for use in AI prompts.",
+        "operation": "executeQuery",
+        "query": "SELECT\n    table_name,\n    string_agg(\n        column_name || ' ' || data_type,\n        ', '                       -- delimiter\n        ORDER BY ordinal_position  -- sort inside each aggregate\n    ) AS columns\nFROM   information_schema.columns\nWHERE  table_schema = 'public'\n  AND  table_name IN ('niche','subcategory','product')   -- adjust the list\nGROUP  BY table_name\nORDER  BY table_name;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        -144,
+        160
+      ],
+      "id": "a122bd9b-14f1-40b6-a0df-a9a334186c8d",
+      "name": "get_db_schema",
+      "credentials": {
+        "postgres": {
+          "id": "chfAuxmRG5Ubb9Gc",
+          "name": "EcomRadar DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -1024,
+        -256
+      ],
+      "id": "2f3e6cea-a123-49ce-9a58-6e879a4a1fb5",
+      "name": "When chat message received",
+      "webhookId": "5d0ef133-0410-49ca-a84f-fb41427d9859"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "askNyx",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -1024,
+        -16
+      ],
+      "id": "8fc512d4-8abe-4d12-a1f0-a4b7dc4ff834",
+      "name": "Webhook",
+      "webhookId": "f3526f1e-23ee-44bc-b6f5-8f86092ddc1e"
+    },
+    {
+      "parameters": {
+        "options": {
+          "responseCode": 200,
+          "responseKey": "output"
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        80,
+        -160
+      ],
+      "id": "c01f1bbd-9b63-4fc0-9c91-b2aec319f64a",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "141244",
+        "contextWindowLength": 2
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.3,
+      "position": [
+        -368,
+        208
+      ],
+      "id": "d6b53b26-8f69-48c7-a726-80f483e8495e",
+      "name": "Postgres Chat Memory",
+      "credentials": {
+        "postgres": {
+          "id": "hMgm1MlcoMgl0tSR",
+          "name": "Local Postgres"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "667fb664-015b-4376-b154-b2563c4c8c7d",
+              "name": "body.message",
+              "value": "={{ $json.body.message }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -736,
+        -16
+      ],
+      "id": "6caac800-5c49-47ca-86b4-8a9e49dfe9cc",
+      "name": "Edit Fields"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "OpenAI Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "postgres_query": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_db_schema": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres Chat Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "69039c32-1ca3-45ad-a87e-4b0309615e00",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "65a0b0bb23c3c7b5296e955b7eeee63ee74a1ca1421961e59c7cd7b3f1a4de47"
+  },
+  "id": "EFAEvettJTyFXujd",
+  "tags": []
+}

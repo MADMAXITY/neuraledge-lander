@@ -1,0 +1,1381 @@
+{
+  "name": "NeuralEdge_Blog_Topic+URL_Research",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -112,
+        240
+      ],
+      "id": "e8b53626-7c9d-4937-93b4-fa30627d2e31",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "model": "sonar",
+        "messages": {
+          "message": [
+            {
+              "content": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('message0_Text', ``, 'string') }}"
+            }
+          ]
+        },
+        "options": {},
+        "requestOptions": {}
+      },
+      "type": "n8n-nodes-base.perplexityTool",
+      "typeVersion": 1,
+      "position": [
+        752,
+        544
+      ],
+      "id": "c8e00a58-342e-446b-b37b-4376b3d67341",
+      "name": "Message a model in Perplexity1",
+      "credentials": {
+        "perplexityApi": {
+          "id": "xmsYYqQpMgOEQE9d",
+          "name": "Perplexity account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineAll",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1136,
+        352
+      ],
+      "id": "488409a7-efd6-4b37-9450-657f8e4add68",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=### Input:\n\n- Cluster_context: {{ JSON.stringify($json.cluster_context, null, 2) }}\n",
+        "options": {
+          "systemMessage": "=\n# Role: Cluster Post Research Agent\n\nYou are an AI-powered **Sonar Research Agent** specializing in creating **cluster post topics** for an AI automation agency. Unlike pillar posts, which cover broad umbrella transformations, **cluster posts zoom in on one major pain point at a time**.\n\nYour role is to:\n\n* Generate maximum **5 strong Unique cluster post topics** for a given **Expertise Area + Niche**.\n* Each topic must **directly address one large-scale pain point** in the niche (e.g., staffing, food waste, compliance, forecasting).\n* Topics must be **big enough for a standalone cluster blog**, but not so broad they overlap with the pillar.\n* You must always analyze any **provided cluster blog data (title, summary, URL)** and ensure **all new topics are completely unique**. Do not repeat or rephrase existing cluster blog angles — every new topic must address a **fresh, unclaimed pain point**.\n* If **no cluster blogs exist yet**, generate 5 **fresh, pain-point-driven cluster topics**.\n\n---\n\n## Objective:\n\nFor each cluster post, provide:\n\n* A **clear topic title** (focused on the pain point).\n* A **single-paragraph description of the pain point**.\n* A **single-paragraph description of the traditional/manual approaches**.\n* A **single-paragraph description of the AI automation solution**.\n* **One citation only**:\n\n  * Must be from a **legit, high-authority blog site** (not product landing pages or small feature posts).\n  * Select the **single strongest/top-ranked source** that validates the pain point.\n  * Provide: `title`, `quote` (30–50 words), `url`, and `date`.\n\n---\n\n## Output Structure:\n\n[\n  {\n    \"topic\": \"\",\n    \"pain_point\": \"\",\n    \"traditional_solution\": \"\",\n    \"ai_solution\": \"\",\n    \"source\": {\n      \"title\": \"\",\n      \"quote\": \"\",\n      \"url\": \"\",\n      \"date\": \"\"\n    }\n  }\n]\n```\n\n---\n\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        1920,
+        1024
+      ],
+      "id": "ed126c33-d000-4f33-a97f-119485ce1eb0",
+      "name": "Search Terms Designer2"
+    },
+    {
+      "parameters": {
+        "model": "sonar",
+        "messages": {
+          "message": [
+            {
+              "content": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('message0_Text', ``, 'string') }}"
+            }
+          ]
+        },
+        "options": {},
+        "requestOptions": {}
+      },
+      "type": "n8n-nodes-base.perplexityTool",
+      "typeVersion": 1,
+      "position": [
+        2192,
+        1376
+      ],
+      "id": "e25949e3-dde1-4ec2-98f5-ea89f75e9451",
+      "name": "Message a model in Perplexity2",
+      "credentials": {
+        "perplexityApi": {
+          "id": "xmsYYqQpMgOEQE9d",
+          "name": "Perplexity account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// =====================\n// 1) Read & normalize input\n// =====================\nconst raw = items.map(i => i.json);\n\nfunction parseMaybeWrappedJson(str) {\n  if (typeof str !== 'string') return null;\n  const cleaned = str.trim()\n    .replace(/^```json\\s*/i, '')\n    .replace(/^```\\s*/i, '')\n    .replace(/```$/i, '')\n    .trim();\n  try { return JSON.parse(cleaned); } catch (_) { return null; }\n}\n\nlet records = [];\nif (raw.length === 1 && typeof raw[0].output === 'string') {\n  const parsed = parseMaybeWrappedJson(raw[0].output);\n  if (Array.isArray(parsed)) records = parsed;\n}\nif (records.length === 0) {\n  records = raw; // already row-wise\n}\n\nconst norm = (s) => (typeof s === 'string' ? s.trim() : (s ?? ''));\n\n// =====================\n// 2) Map directly to rows\n// =====================\nconst rows = records.map(r => ({\n  topic: norm(r.topic),\n  pain_point: norm(r.pain_point),\n  traditional_solution: norm(r.traditional_solution),\n  ai_solution: norm(r.ai_solution),\n  source_title: norm(r.source?.title || r.source_title || ''),\n  source_quote: norm(r.source?.quote || r.source_quote || ''),\n  source_url: norm(r.source?.url || r.source_url || ''),\n  source_date: norm(r.source?.date || r.source_date || '')\n}));\n\n// =====================\n// 3) Return as n8n items\n// =====================\nreturn rows.map(r => ({ json: r }));\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2320,
+        1008
+      ],
+      "id": "dd30aca2-2953-4243-9ff9-644640ad4e53",
+      "name": "Code5"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1qwAY0_bMqaGdjsO0ChqAvxVULIOVpF7fteVvTFRW-Ig",
+          "mode": "list",
+          "cachedResultName": "Pillar+Cluster_Blog_Diary",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1qwAY0_bMqaGdjsO0ChqAvxVULIOVpF7fteVvTFRW-Ig/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Pillar",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1qwAY0_bMqaGdjsO0ChqAvxVULIOVpF7fteVvTFRW-Ig/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Blog_Completion_Status",
+              "lookupValue": "Pending"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        96,
+        240
+      ],
+      "id": "ca7872a2-a118-40dd-ad87-c60acebadb69",
+      "name": "Getting_Pending_PillarBlog_Idea",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "ah9W3YDe6Zsy2SL4",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const filtered = items\n  .filter(item => {\n    const expertise = item.json[\"Expertise_Areas\"];\n    const niche = item.json[\"Expertise_Niche\"];\n    return expertise && niche; // keep only if both exist\n  })\n  .map(item => {\n    return {\n      json: {\n        Expertise_Areas: item.json[\"Expertise_Areas\"],\n        Expertise_Niche: item.json[\"Expertise_Niche\"]\n      }\n    };\n  });\n\n// return only the first row (or empty array if none)\nreturn filtered.length > 0 ? [filtered[0]] : [];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        336,
+        240
+      ],
+      "id": "b6571487-d55e-4e11-9d67-199035662255",
+      "name": "First_Row_Filter",
+      "executeOnce": false
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=### Input:\n\n- Expertise_General: {{ $json.Expertise_Areas }}\n- Expertise_Niche: {{ $json.Expertise_Niche }}",
+        "options": {
+          "systemMessage": "=# Role: Pillar Post Research Agent for Pain Point Mining\n\nYou are an elite **AI Research Strategist** specializing in discovering **pillar post topics** for an AI automation agency. Your role is to surface **broad, foundational, industry-transformation topics** that define how an entire industry evolves through AI automation — NOT narrow tools, features, or tactical implementations.\n\n---\n\n## Input Context:\nYou will receive:\n- **Expertise_Areas**: The general capability domain (e.g., \"AI Automation\", \"Intelligent Systems\")\n- **Expertise_Niche**: The target industry (e.g., \"Real Estate\", \"Restaurant\", \"Medical Clinic\")\n\nYour task: Generate research for **ONE pillar topic only** that represents the strategic intersection of this expertise area applied to this niche.\n\n---\n\n## Topic Generation Rules:\n\n### What Makes a Valid Pillar Topic:\n✅ **Broad & Industry-Wide**: Covers entire niche transformation, not a subset\n✅ **Strategic Level**: Appeals to C-suite, owners, decision-makers\n✅ **Evergreen Foundation**: Can support 2500+ word comprehensive content\n✅ **Natural Combination**: Merges Expertise Area + Niche seamlessly\n\n### Topic Formats (Choose Most Natural):\n- \"[Expertise Area] in [Niche]\"\n- \"How [Expertise Area] Transforms [Niche]\"\n- \"[Expertise Area] for [Niche Industry]\"\n- \"The Future of [Niche] with [Expertise Area]\"\n\n### Examples of CORRECT Pillar Topics:\n- ✅ \"AI Automation in Real Estate\"\n- ✅ \"Intelligent Automation for Restaurant Operations\"\n- ✅ \"AI-Powered Transformation in Medical Clinics\"\n\n### Examples of INCORRECT Topics (Too Narrow):\n- ❌ \"AI Chatbots for Restaurant Reservations\" (too specific - this is cluster content)\n- ❌ \"Automated Lead Scoring Tools for Real Estate\" (tool-focused)\n- ❌ \"AI Email Marketing in Healthcare\" (tactical, not strategic)\n\n---\n\n## Research Requirements:\n\n### 1. Pain Point Discovery (5-7 Major Industry Problems)\n\n**Use Perplexity to research:**\n- Industry forums (Reddit, industry-specific communities)\n- Business publications covering this niche\n- Expert interviews and thought leadership\n- Market research reports\n- Competitor analysis and reviews\n\n**Pain Point Quality Criteria:**\nEach pain point must be:\n- **Industry-Scale**: Affects majority of businesses in the niche\n- **High-Impact**: Causes significant financial, operational, or competitive damage\n- **Persistent**: Long-standing problem without easy solutions\n- **Automatable**: Can be addressed through AI/automation\n- **Measurable**: Has clear business metrics (time, cost, revenue impact)\n\n**Output Format:**\nCompile all 5-7 pain points into **ONE consolidated paragraph**, separated by semicolons (;). Each pain point should be stated clearly in 8-15 words.\n\n**Example Format:**\n\"Businesses in [niche] struggle with [pain 1]; they face challenges with [pain 2]; [pain 3] creates bottlenecks in operations; [pain 4] leads to revenue loss; [pain 5] increases operational costs; [pain 6] causes customer dissatisfaction; [pain 7] results in competitive disadvantage.\"\n\n---\n\n### 2. Traditional Solution Analysis\n\n**Research Requirements:**\n- Identify current manual/legacy methods used across the industry\n- Document limitations, inefficiencies, and failure points\n- Include cost factors (labor, time, error rates)\n- Show why these approaches are becoming obsolete\n\n**Output Format:**\nWrite **ONE consolidated paragraph** (100-150 words) covering:\n- What methods are currently used\n- Why they're inadequate or inefficient\n- Specific limitations (cost, speed, accuracy, scalability)\n- The gap that creates opportunity for automation\n\n---\n\n### 3. AI Solution Landscape\n\n**Research Requirements:**\n- Focus on **solution CATEGORIES**, NOT specific tools or brand names\n- Cover the breadth of AI capabilities applicable to the niche\n- Explain transformation outcomes, not feature lists\n- Emphasize business value: efficiency, accuracy, scalability, cost reduction\n\n**Prohibited:**\n- ❌ Mentioning specific tool names (Zapier, Make, ChatGPT, etc.)\n- ❌ Technical jargon without business context\n- ❌ Feature descriptions without outcome linkage\n\n**Output Format:**\nWrite **ONE consolidated paragraph** (100-150 words) covering:\n- High-level AI capability categories (intelligent automation, predictive analytics, natural language processing, computer vision, etc.)\n- How these capabilities transform operations\n- Measurable business outcomes\n- Competitive advantages gained\n\n---\n\n### 4. Source Citation (Critical for Credibility & SEO Research)\n\n**Source Quality Requirements:**\nOnly cite sources from:\n✅ Major business publications (Forbes, HBR, Inc., Entrepreneur)\n✅ Industry-specific authoritative blogs and magazines\n✅ Research firms and analyst reports (Gartner, McKinsey, Deloitte)\n✅ Established thought leaders in the niche\n✅ Academic institutions and industry associations\n\n**Prohibited Sources:**\n❌ Tool vendor blogs (biased, promotional)\n❌ Random Medium articles or personal blogs\n❌ Social media posts\n❌ Outdated sources (older than 2 years unless citing foundational research)\n\n**CRITICAL URL Requirements:**\n⚠️ **All URLs MUST meet these criteria:**\n1. **Publicly Accessible**: No paywalls, login walls, or registration required\n2. **Currently Active**: URL must be working (not 404, not blocked, not redirected to homepage)\n3. **Top-Ranking Content**: Must be from pages that rank in top 10-20 Google results for relevant keywords\n4. **SEO Optimized Pages**: Should be well-structured articles with clear keywords (used for Google Ads API keyword extraction)\n5. **Indexable**: Not blocked by robots.txt or noindex tags\n\n**URL Verification Process:**\nBefore including any URL:\n- ✅ Verify the URL loads successfully\n- ✅ Confirm content is fully accessible without barriers\n- ✅ Check that the page is a substantial article (not a landing page or ad)\n- ✅ Ensure the domain has high authority (DA 40+)\n- ✅ Prefer URLs from pages ranking for high-volume keywords in the niche\n\n**Why This Matters:**\nThese URLs will be used for Google Ads API keyword extraction. Blocked, paywalled, or low-quality URLs will break the downstream keyword research process. Only provide URLs that are:\n- Fully scrapable\n- SEO-optimized\n- From top-ranking competitive content\n\n**Citation Format:**\nFor each source (minimum 3, maximum 5):\n- **title**: Exact article title\n- **quote**: Extract 30-50 words that directly support the pillar topic or pain points\n- **url**: Full URL (MUST be accessible, working, and top-ranking)\n- **date**: Publication date in YYYY-MM-DD format or \"MMM DD, YYYY\"\n\n**Quote Selection Guidelines:**\n- Must be directly relevant to the pillar topic or pain points\n- Should include statistics, expert opinions, or industry insights\n- Avoid generic statements\n- Ensure quote is compelling and substantive\n\n---\n\n## Output Format (JSON):\n\nReturn your research in this EXACT structure:\n\n\n[\n  {\n    \"topic\": \"[Your single pillar topic - exactly as formatted above]\",\n    \"pain_point\": \"[One consolidated paragraph with 5-7 pain points separated by semicolons]\",\n    \"traditional_solution\": \"[One consolidated paragraph 100-150 words covering current approaches and their limitations]\",\n    \"ai_solution\": \"[One consolidated paragraph 100-150 words covering AI capability categories and transformation outcomes]\",\n    \"sources\": [\n      {\n        \"title\": \"[Exact article title]\",\n        \"quote\": \"[30-50 word extracted quote]\",\n        \"url\": \"[Full URL]\",\n        \"date\": \"[YYYY-MM-DD or MMM DD, YYYY]\"\n      }\n    ]\n  }\n]\n\n\n---\n\n## Quality Assurance Checklist:\n\nBefore submitting, verify:\n\n**Topic:**\n- [ ] Is broad and industry-wide (not feature-specific)\n- [ ] Naturally combines Expertise Area + Niche\n- [ ] Can support 2500+ word pillar content\n- [ ] Appeals to strategic decision-makers\n\n**Pain Points:**\n- [ ] 5-7 distinct problems identified\n- [ ] All are industry-scale (not edge cases)\n- [ ] Written in one consolidated paragraph with semicolons\n- [ ] Each is clear and specific (8-15 words per pain point)\n\n**Traditional Solutions:**\n- [ ] Single paragraph (100-150 words)\n- [ ] Covers current industry practices\n- [ ] Explains limitations clearly\n- [ ] Shows why change is needed\n\n**AI Solutions:**\n- [ ] Single paragraph (100-150 words)\n- [ ] Uses capability categories (no tool names)\n- [ ] Focuses on business outcomes\n- [ ] Links to pain points addressed\n\n**Sources:**\n- [ ] 3-5 high-authority sources only\n- [ ] All from legitimate publications\n- [ ] Quotes are 30-50 words and relevant\n- [ ] URLs are valid, accessible, and NOT blocked/paywalled\n- [ ] URLs are from top-ranking pages (Google top 10-20)\n- [ ] All URLs verified to be working and scrapable\n- [ ] Dates are included\n\n---\n\n## Important Reminders:\n\n1. **ONE topic only** - Do not generate multiple topics or variations\n2. **Use Perplexity** - All research must be web-search validated, not assumed\n3. **No tool names** - Focus on capability categories and outcomes\n4. **Consolidated paragraphs** - Pain points, traditional solutions, and AI solutions must each be single paragraphs\n5. **Valid JSON** - Ensure proper JSON formatting with no syntax errors\n6. **Authority sources only** - Quality over quantity for citations\n\n---\n\n## Research Approach:\n\n1. **Start with Perplexity search**: \"[Expertise Area] challenges in [Niche industry]\"\n2. **Dig into pain points**: Look for recurring themes across multiple sources\n3. **Validate with data**: Find statistics, surveys, expert quotes\n4. **Map solutions**: Research how AI is currently being discussed in context of this niche\n5. **Cite strategically**: Choose sources that lend maximum credibility\n6. **Verify URLs**: Before finalizing, check each URL:\n   - Load the page to confirm it's accessible\n   - Verify no paywall or login required\n   - Confirm it's a top-ranking article (check Google search results)\n   - Ensure the page has substantial, keyword-rich content suitable for SEO analysis\n\nYour output will be used to generate comprehensive pillar blog posts, so accuracy, depth, and strategic thinking are critical. **The URLs you provide will be processed through Google Ads API for keyword extraction, so they must be publicly accessible, working, and from high-ranking competitive content.**"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        544,
+        240
+      ],
+      "id": "e5819211-92dd-419a-83da-36e929292287",
+      "name": "Pillar_BlogPost_Topic+URL"
+    },
+    {
+      "parameters": {
+        "jsCode": "const parsedOutput = JSON.parse(items[0].json.output); // Parse the JSON string\nconst result = [];\n\nparsedOutput.forEach(block => {\n  const sources = block.sources || [];\n\n  sources.forEach((source, index) => {\n    result.push({\n      json: {\n        topic: index === 0 ? block.topic : '',\n        pain_point: index === 0 ? block.pain_point : '',\n        traditional_solution: index === 0 ? block.traditional_solution : '',\n        ai_solution: index === 0 ? block.ai_solution : '',\n        source_title: source.title || '',\n        source_quote: source.quote || '',\n        source_url: source.url || '',\n        source_date: source.date || ''\n      }\n    });\n  });\n});\n\nreturn result;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        896,
+        240
+      ],
+      "id": "21ef4802-daaa-4f59-a28a-b49c72314211",
+      "name": "Clean_Format"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1yTiDAgcowuZjDVvS-wmuMhtG_EYUFqnm4P0zPTy3qVA",
+          "mode": "list",
+          "cachedResultName": "Topic_Research_Final",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1yTiDAgcowuZjDVvS-wmuMhtG_EYUFqnm4P0zPTy3qVA/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Pillar ",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1yTiDAgcowuZjDVvS-wmuMhtG_EYUFqnm4P0zPTy3qVA/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Expertise_Areas",
+              "displayName": "Expertise_Areas",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Expertise_Niche",
+              "displayName": "Expertise_Niche",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "topic",
+              "displayName": "topic",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "pain_point",
+              "displayName": "pain_point",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "traditional_solution",
+              "displayName": "traditional_solution",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ai_solution",
+              "displayName": "ai_solution",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "source_title",
+              "displayName": "source_title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "source_quote",
+              "displayName": "source_quote",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "source_url",
+              "displayName": "source_url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "source_date",
+              "displayName": "source_date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1328,
+        352
+      ],
+      "id": "14881b51-333c-48f4-b856-97ccba236fdb",
+      "name": "Inserting_Topic+URL data in Google Sheet",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "ah9W3YDe6Zsy2SL4",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1qwAY0_bMqaGdjsO0ChqAvxVULIOVpF7fteVvTFRW-Ig",
+          "mode": "list",
+          "cachedResultName": "Pillar+Cluster_Blog_Diary",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1qwAY0_bMqaGdjsO0ChqAvxVULIOVpF7fteVvTFRW-Ig/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Pillar",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1qwAY0_bMqaGdjsO0ChqAvxVULIOVpF7fteVvTFRW-Ig/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Blog_Completion_Status",
+              "lookupValue": "Published"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        416,
+        1024
+      ],
+      "id": "c13a18d0-64f4-4c77-bf8b-e752caaf7507",
+      "name": "Published_Pillar Blogs_Data",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "ah9W3YDe6Zsy2SL4",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "959db739-b7b0-4b1d-8bd8-4ba68ef863f9",
+              "leftValue": "={{ $json.Expertise_Areas }}",
+              "rightValue": "AI Automation",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "37b7c1be-d246-4ef6-a3f6-450207fe8b64",
+              "leftValue": "={{ $json.Expertise_Niche }}",
+              "rightValue": "Restaurant",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        624,
+        1024
+      ],
+      "id": "e7141105-0869-4a8d-a28c-149c63ae537d",
+      "name": "Manual Choice(Telegram_not yet build)",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1qwAY0_bMqaGdjsO0ChqAvxVULIOVpF7fteVvTFRW-Ig",
+          "mode": "list",
+          "cachedResultName": "Pillar+Cluster_Blog_Diary",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1qwAY0_bMqaGdjsO0ChqAvxVULIOVpF7fteVvTFRW-Ig/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1616179628,
+          "mode": "list",
+          "cachedResultName": "Cluster",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1qwAY0_bMqaGdjsO0ChqAvxVULIOVpF7fteVvTFRW-Ig/edit#gid=1616179628"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Expertise_Areas",
+              "lookupValue": "={{ $json.Expertise_Areas }}"
+            },
+            {
+              "lookupColumn": "Expertise_Niche",
+              "lookupValue": "={{ $json.Expertise_Niche }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1040,
+        1024
+      ],
+      "id": "90c0b166-9800-4cfd-8528-2b6bd49cd13d",
+      "name": "Published_Cluster_Blogs_Data_Under selected pillar",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "ah9W3YDe6Zsy2SL4",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Collect all items passed into this Code node\nconst inputItems = items.map(item => item.json);\n\n// Extract expertise + niche from the first item (always present)\nconst expertise = inputItems[0][\"Expertise Areas\"] || inputItems[0][\"['Expertise Areas']\"] || \"\";\nconst niche = inputItems[0][\"Expertise_Niche\"] || inputItems[0][\"Expertise_Niche\"] || \"\";\n\n// Filter out items that are just pillar info (no Blog_Title / Blog_Url etc.)\nconst clusters = inputItems.filter(obj =>\n  obj.Blog_Title || obj.Blog_Url || obj[\"Blog_Summery \"] || obj.Blog_Summery\n);\n\n// Normalize cluster fields\nconst normalizedClusters = clusters.map(c => ({\n  Cluster_Number: c.Cluster_Number || c.Blog_Number || \"\",\n  Blog_Title: c.Blog_Title || \"\",\n  Blog_Summery: c[\"Blog_Summery \"] || c.Blog_Summery || \"\",\n  Blog_Url: c.Blog_Url || \"\"\n}));\n\n// Wrap everything under one parent key so you can pass it forward\nreturn [\n  {\n    json: {\n      cluster_context: {\n        expertise,\n        niche,\n        clusters: normalizedClusters\n      }\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1680,
+        1024
+      ],
+      "id": "3e45829d-c77f-48cc-a615-2dc594c04ae6",
+      "name": "Multiple Items to one"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "Expertise_Areas, Expertise_Niche",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        832,
+        1024
+      ],
+      "id": "9169d4e4-10ec-4807-8c31-9d1b13333ef6",
+      "name": "Split Out1"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "Blog_Number, Blog_Title, ['Blog_Summery '], Blog_Url",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        1232,
+        1024
+      ],
+      "id": "f5b9c7b9-d564-4b6a-9f7c-1607104f42d9",
+      "name": "Filtering Essential Fields",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineAll",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1456,
+        1216
+      ],
+      "id": "ea2dcefb-e350-4263-ac0f-29dd6535e460",
+      "name": "Merging"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "Blog_Title",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        2544,
+        1600
+      ],
+      "id": "dccea6b2-d1a9-4a0f-ad0a-76520db8679d",
+      "name": "Published cluster topics"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": " topic",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        2528,
+        1184
+      ],
+      "id": "c853c944-910e-4d40-8de5-eb27ed847ca9",
+      "name": "New researched topics"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Collect all topics into an array\nconst topics = items.map(item => item.json.topic || item.json.Blog_Title || \"\").filter(t => t);\n\n// Return as a single row\nreturn [\n  {\n    json: {\n      new_topics: topics\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2736,
+        1184
+      ],
+      "id": "aae6d18b-d498-4f37-b963-a93624e7b545",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Collect all published topics into an array\nconst topics = items.map(item => item.json.Blog_Title || item.json.topic || \"\").filter(t => t);\n\n// Return as a single row\nreturn [\n  {\n    json: {\n      published_topics: topics\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2752,
+        1600
+      ],
+      "id": "2e921772-f071-4209-b144-b5ca00986be6",
+      "name": "Code1"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        3072,
+        1376
+      ],
+      "id": "5f5c55e3-e082-4cff-88de-02f56c6819b0",
+      "name": "Merge1"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=### Input:\n\n- Published_topics: {{ $json.published_topics }}\n- New_topics: {{ $json.new_topics }}\n",
+        "options": {
+          "systemMessage": "=# Role: Cluster Topic Deduplication Agent\n\nYou filter **new_topics** by removing any that are duplicates of or semantically too close to **published_topics**.\n\n## Rules:\n\n1. Compare new_topics against published_topics using **semantic meaning**, not just wording.\n2. If a new topic overlaps **more than ~75–80% in meaning** with a published topic, remove it.\n3. Do **not rewrite** or rephrase topics. Output must return only the **exact original text** of the surviving new topics.\n4. Preserve the order of new_topics.\n5. If none remain, return an empty list.\n\n---\n\n## Output Format:\n\n\n{\n  \"unique_new_topics\": [\n    \"\"\n  ]\n}\n\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        3312,
+        1376
+      ],
+      "id": "fe792684-cf60-4a4a-8bfc-fcf257c6fc54",
+      "name": "Search Terms Designer3"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineAll",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        3856,
+        1344
+      ],
+      "id": "fae92095-6112-4692-bce7-6da2e193a63c",
+      "name": "Merge2"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Normalize for safe comparison\nfunction normalize(str) {\n  return (str || \"\").toLowerCase().trim();\n}\n\n// 1) Separate rows and grab unique_new_topics\nlet filteredTitles = [];\nconst fullData = [];\n\nfor (const item of items) {\n  const r = item.json;\n\n  // Collect first non-empty unique_new_topics\n  if (r.output) {\n    try {\n      const parsed = JSON.parse(r.output);\n      if (parsed.unique_new_topics && !filteredTitles.length) {\n        filteredTitles = parsed.unique_new_topics.map(normalize);\n      }\n    } catch (e) {}\n  }\n\n  // Collect the topic rows\n  if (r.topic) {\n    fullData.push(r);\n  }\n}\n\n// 2) Filter rows by topic\nconst finalData = fullData.filter(d =>\n  filteredTitles.includes(normalize(d.topic))\n);\n\n// 3) Return in n8n format\nreturn finalData.map(d => ({ json: d }));\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4064,
+        1344
+      ],
+      "id": "25aa2291-fe7e-4b39-a127-66afb2fa8012",
+      "name": "Code2"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "959db739-b7b0-4b1d-8bd8-4ba68ef863f9",
+              "leftValue": "={{ $json.topic }}",
+              "rightValue": "Reducing Food Waste and Optimizing Inventory Management with AI in Restaurants",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        4288,
+        1344
+      ],
+      "id": "02e871ee-3772-472b-8407-a2ef8159afdb",
+      "name": "Manual Choice(Telegram_not yet build)1",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        4752,
+        1664
+      ],
+      "id": "bd52a45b-edcc-4383-93b9-99c262046861",
+      "name": "Merge3"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "Expertise_Areas, Expertise_Niche, topic, pain_point, traditional_solution, ai_solution, source_title, source_quote, source_url, source_date",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        4960,
+        1664
+      ],
+      "id": "c818eb73-28ff-43b3-a3be-9e9894a79f5d",
+      "name": "Split Out"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1yTiDAgcowuZjDVvS-wmuMhtG_EYUFqnm4P0zPTy3qVA",
+          "mode": "list",
+          "cachedResultName": "Topic_Research_Final",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1yTiDAgcowuZjDVvS-wmuMhtG_EYUFqnm4P0zPTy3qVA/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1538252249,
+          "mode": "list",
+          "cachedResultName": "Cluster ",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1yTiDAgcowuZjDVvS-wmuMhtG_EYUFqnm4P0zPTy3qVA/edit#gid=1538252249"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Expertise_Areas",
+              "displayName": "Expertise_Areas",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Expertise_Niche",
+              "displayName": "Expertise_Niche",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "topic",
+              "displayName": "topic",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "pain_point",
+              "displayName": "pain_point",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "traditional_solution",
+              "displayName": "traditional_solution",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ai_solution",
+              "displayName": "ai_solution",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "source_title",
+              "displayName": "source_title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "source_quote",
+              "displayName": "source_quote",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "source_url",
+              "displayName": "source_url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "source_date",
+              "displayName": "source_date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        5200,
+        1664
+      ],
+      "id": "8bfa1fc4-c755-448b-9300-2143eec90403",
+      "name": "Inserting_Topic+URL data in Google Sheet1",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "ah9W3YDe6Zsy2SL4",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "# Pillar Post Topic Research\n \n",
+        "height": 848,
+        "width": 1952,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -240,
+        -48
+      ],
+      "typeVersion": 1,
+      "id": "c25464af-690b-4431-b57d-d0e9f19b73ec",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "# Cluster Post Topic Research\n \n",
+        "height": 1136,
+        "width": 5904,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -240,
+        880
+      ],
+      "typeVersion": 1,
+      "id": "e3739e73-ebd3-485e-b2ae-021d676f6341",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "zuQCc9X5aysfSGP3",
+          "mode": "list",
+          "cachedResultName": "NeuralEdge_Keyword Research_no_new_Keyword_Gneration"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [
+            "topic"
+          ],
+          "schema": [
+            {
+              "id": "topic",
+              "displayName": "topic",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        5424,
+        1664
+      ],
+      "id": "96376334-7b9f-4441-b30c-348292970bf6",
+      "name": "Execute Workflow1",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "model": "google/gemini-2.5-flash",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        512,
+        592
+      ],
+      "id": "a5fcb313-35ea-410a-9abd-f4d4dfa4dd5b",
+      "name": "OpenRouter Chat Model",
+      "credentials": {
+        "openRouterApi": {
+          "id": "7dXZyfJUiLfmv09i",
+          "name": "OpenRouter account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "google/gemini-2.5-flash",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        1920,
+        1248
+      ],
+      "id": "af4d551a-39bc-4088-ac29-5bdd8b37dd98",
+      "name": "OpenRouter Chat Model1",
+      "credentials": {
+        "openRouterApi": {
+          "id": "7dXZyfJUiLfmv09i",
+          "name": "OpenRouter account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "google/gemini-2.5-flash",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        3360,
+        1712
+      ],
+      "id": "fabe296f-43c4-4ca6-a692-5f9739898626",
+      "name": "OpenRouter Chat Model2",
+      "credentials": {
+        "openRouterApi": {
+          "id": "7dXZyfJUiLfmv09i",
+          "name": "OpenRouter account 2"
+        }
+      }
+    }
+  ],
+  "pinData": {
+    "Search Terms Designer2": [
+      {
+        "json": {
+          "output": "[\n  {\n    \"topic\": \"AI-Driven Solutions to Overcome Restaurant Staffing Challenges\",\n    \"pain_point\": \"Staffing shortages, high turnover, and inefficient labor scheduling lead to operational disruptions, increased labor costs, and poor customer service in restaurants.\",\n    \"traditional_solution\": \"Traditionally, restaurants rely on manual scheduling, guesswork in forecasting customer demand, and reactive hiring processes. This often results in overstaffing or understaffing, increased overtime costs, and difficulty retaining employees in a competitive labor market.\",\n    \"ai_solution\": \"AI automation employs data-driven scheduling tools that analyze sales patterns, customer flow, and seasonal trends to optimize staff deployment and reduce labor costs. AI-powered systems also automate hiring workflows and onboarding to speed recruitment, while supporting workforce management to improve employee satisfaction and retention.\",\n    \"source\": {\n      \"title\": \"How AI is Revolutionizing Restaurant Staffing - Unlocking Tech\",\n      \"quote\": \"Discover how AI-driven scheduling solutions optimize labor costs, enhance employee satisfaction, and ensure seamless operations.\",\n      \"url\": \"https://www.unlockingtech.com/blog-posts/how-ai-is-revolutionizing-restaurant-staffing\",\n      \"date\": \"2025-05-22\"\n    }\n  },\n  {\n    \"topic\": \"Enhancing Food Safety Compliance in Restaurants Through AI Automation\",\n    \"pain_point\": \"Maintaining food safety compliance is complex and labor-intensive, with risks of contamination, spoilage, and regulatory penalties due to manual monitoring and documentation errors.\",\n    \"traditional_solution\": \"Restaurants depend on manual checks for temperature control, hygiene practices, and paper-based documentation to meet regulations. These approaches are prone to human error, delayed reporting, and incomplete tracking, increasing food safety risks.\",\n    \"ai_solution\": \"AI automation enables real-time monitoring of storage conditions, hygienic behavior, and automated compliance documentation. Predictive analytics identify potential risks before violations occur. AI systems also track regulatory changes and streamline adherence, reducing errors and enhancing food safety standards.\",\n    \"source\": {\n      \"title\": \"AI Analytics for Restaurant Food Safety Compliance - Loman\",\n      \"quote\": \"The conclusion is clear: incorporating AI in restaurant operations can significantly enhance food safety, compliance, and overall efficiency.\",\n      \"url\": \"https://loman.ai/blog/ai-analytics-for-restaurant-food-safety-compliance\",\n      \"date\": \"2024-04-07\"\n    }\n  },\n  {\n    \"topic\": \"Reducing Food Waste and Optimizing Inventory Management with AI in Restaurants\",\n    \"pain_point\": \"Excess food waste and inefficient inventory management increase costs, reduce profitability, and negatively impact sustainability efforts in restaurants.\",\n    \"traditional_solution\": \"Restaurants typically manage inventory and waste through manual tracking, rough estimations of demand, and reactive ordering practices. These approaches often cause over-ordering, spoilage, and untracked food losses.\",\n    \"ai_solution\": \"AI-powered inventory systems analyze historical sales, seasonal trends, and real-time data to precisely forecast demand and optimize stock levels. AI tools use sensors and image recognition to monitor waste patterns and adjust procurement and portioning accordingly, thereby reducing food waste and costs.\",\n    \"source\": {\n      \"title\": \"5 Ways AI Reduces Food Waste in Restaurants by 30%\",\n      \"quote\": \"Discover 5 practical ways AI helps restaurants cut food waste by up to 30%, from inventory optimization to waste recycling.\",\n      \"url\": \"https://www.therail.media/stories/2025/1/21/5-ways-ai-reduces-food-waste-in-restaurants-by-30\",\n      \"date\": \"2025-01-21\"\n    }\n  },\n  {\n    \"topic\": \"Improving Order Accuracy and Streamlining Delivery Efficiency in Restaurants Using AI\",\n    \"pain_point\": \"Order errors and inefficient delivery logistics lead to customer dissatisfaction, increased food waste, and lost revenue in restaurant operations.\",\n    \"traditional_solution\": \"Manual order taking and routing often result in miscommunications, incorrect orders, and inefficient delivery routes. These issues cause delays, increased labor costs, and higher rates of returned or wasted food.\",\n    \"ai_solution\": \"AI-powered ordering systems—including voice assistants, chatbots, and kiosks—reduce human errors by accurately capturing orders and preferences. Predictive inventory and routing algorithms optimize stock and delivery paths to shorten wait times and improve operational flow, elevating customer satisfaction.\",\n    \"source\": {\n      \"title\": \"AI for Accuracy: How Artificial Intelligence is Revolutionizing Order Management\",\n      \"quote\": \"Explore how artificial intelligence is transforming restaurant operations by enhancing order accuracy, streamlining workflows, and boosting efficiency.\",\n      \"url\": \"https://checkless.io/blog/ai-accuracy-restaurant-efficiency\",\n      \"date\": \"2025-07-22\"\n    }\n  },\n  {\n    \"topic\": \"Leveraging AI Automation to Streamline Restaurant Labor Management and Scheduling\",\n    \"pain_point\": \"Inefficient labor management causes scheduling conflicts, increased payroll expenses, and employee dissatisfaction in restaurants.\",\n    \"traditional_solution\": \"Managers often use manual spreadsheets or basic scheduling tools without integrating real-time data, leading to last-minute shift changes, staff shortages during peak hours, and difficulty balancing labor costs.\",\n    \"ai_solution\": \"AI-based labor management platforms dynamically forecast staffing needs based on real-time sales data and customer demand patterns. These tools enable optimized shift scheduling, reduce overtime, automate compliance with labor laws, and provide fair scheduling practices to enhance employee morale.\",\n    \"source\": {\n      \"title\": \"AI & Automation: The Future Of Labor Management In Restaurants\",\n      \"quote\": \"Labor shortages and rising wages have long been pain points for the restaurant industry, and the advent of AI is offering new solutions to these challenges.\",\n      \"url\": \"https://timeforge.com/industry-news/ai-and-automation-the-future-of-labor-management-in-the-restaurant-industry/\",\n      \"date\": \"2025-05-09\"\n    }\n  }\n]"
+        }
+      }
+    ],
+    "Search Terms Designer3": [
+      {
+        "json": {
+          "output": "{\n  \"unique_new_topics\": [\n    \"Enhancing Food Safety Compliance in Restaurants Through AI Automation\",\n    \"Reducing Food Waste and Optimizing Inventory Management with AI in Restaurants\",\n    \"Improving Order Accuracy and Streamlining Delivery Efficiency in Restaurants Using AI\"\n  ]\n}"
+        }
+      }
+    ],
+    "Pillar_BlogPost_Topic+URL": [
+      {
+        "json": {
+          "output": "[\n  {\n    \"topic\": \"AI Automation for Restaurant Industry\",\n    \"pain_point\": \"Businesses in the restaurant industry struggle with inefficient inventory management leading to waste and stockouts; they face challenges with complex supply chain logistics impacting ingredient freshness and cost; managing staff scheduling and labor optimization is difficult, resulting in high turnover and suboptimal coverage; customer service consistency and personalization are hard to maintain at scale; adapting menus quickly to market trends and maintaining quality presents significant hurdles; accurate real-time sales and demand forecasting is often elusive causing food waste; and extracting actionable insights from operational data to drive improvements remains a key challenge.\",\n    \"traditional_solution\": \"Restaurants traditionally manage inventory, supply chain, staff scheduling, customer service, menu engineering, sales forecasting, and operational analytics using manual methods such as paper-based tracking, handwritten orders, spreadsheet logs, and in-person communication. These approaches depend heavily on human labor, causing inefficiencies, increased error rates, and time consumption. For example, inventory and supply management often involve manual count and order placement, which is error-prone and slow. Staff scheduling is commonly done via paper rosters or simple spreadsheets, risking miscommunication and inflexible shift adjustments. Menu engineering and sales forecasting are often based on intuition or basic sales records without advanced analytics, resulting in suboptimal menu design and planning. Operational analytics lack real-time data, hindering timely decisions. These limitations lead to higher labor costs, slower response times, and increased mistakes, impeding scalability and adaptation to digital trends. Consequently, traditional manual methods are becoming obsolete as they cannot keep pace with modern demands for efficiency, accuracy, and data insight.\",\n    \"ai_solution\": \"AI automation can transform restaurant operations primarily through workflow automation, predictive analytics, personalized customer engagement, and resource optimization. Automation streamlines everyday tasks like order processing, staff scheduling, and kitchen workflows, leading to improved speed and reduced errors. Predictive analytics enable accurate forecasting of demand, allowing restaurants to optimize inventory and adjust staffing proactively, which enhances scalability and responsiveness. Personalized engagement through AI anticipates customer preferences, boosting satisfaction and loyalty while supporting targeted marketing efforts. Together, these solutions increase efficiency by simplifying and accelerating operations, improve accuracy by minimizing human error, enhance scalability by enabling real-time adjustments to fluctuating demand, and facilitate cost reduction through optimized labor use and minimized waste. Ultimately, AI automation empowers restaurants to operate smarter, meet customer expectations consistently, and maintain profitability in competitive and resource-constrained environments.\",\n    \"sources\": [\n      {\n        \"title\": \"Restaurants Pain Points and How They Can Be Solved With AI ...\",\n        \"quote\": \"The restaurant industry is infamous for its slim profit margins, fierce competition, and high operational costs. From managing inventory and supply chains to optimizing staff schedules and ensuring customer satisfaction, restaurant owners face a multitude of challenges daily. Manual processes and traditional approaches often lead to inefficiencies, errors, and missed opportunities.\",\n        \"url\": \"https://bluegiftdigital.com/restaurants-pain-points-and-how-they-can-be-solved-with-ai-automation/\",\n        \"date\": \"2025-07-14\"\n      },\n      {\n        \"title\": \"AI for Restaurants: The Tools You Need In 2025 - Fourth\",\n        \"quote\": \"AI solutions are transforming the industry from scheduling and labor optimization to sales forecasting, table management, and food waste reduction. These applications allow restaurant operators to make data-driven decisions that cut costs, boost efficiency, and improve customer experience.\",\n        \"url\": \"https://www.fourth.com/article/ai-in-restaurants\",\n        \"date\": \"2025-04-07\"\n      },\n      {\n        \"title\": \"AI in restaurants | Deloitte Insights\",\n        \"quote\": \"Thirty-six percent expect AI to improve their restaurant operations, loyalty programs, and procurement and supply chain management. A smaller percentage plans to use it to optimize pricing (30%), reduce food waste (29%), and personalize the customer experience (27%).\",\n        \"url\": \"https://www.deloitte.com/us/en/insights/industry/retail-distribution/ai-in-restaurants.html\",\n        \"date\": \"2025-06-24\"\n      },\n      {\n        \"title\": \"Smart Independent Restaurant Management: Key Strategies\",\n        \"quote\": \"Traditional management, heavily reliant on manual processes, often lacks the agility and data-driven insights necessary to compete effectively. For example, manual inventory tracking can lead to inconsistent stock levels and increased food waste, while paper-based scheduling can neglect labor cost optimization opportunities.\",\n        \"url\": \"https://chefmod.com/blog/empowering-independent-restaurants-navigating-technology-and-tradition/\",\n        \"date\": \"2025-01-21\"\n      }\n    ]\n  }\n]"
+        }
+      }
+    ]
+  },
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Getting_Pending_PillarBlog_Idea",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model in Perplexity1": {
+      "ai_tool": [
+        [
+          {
+            "node": "Pillar_BlogPost_Topic+URL",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Inserting_Topic+URL data in Google Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search Terms Designer2": {
+      "main": [
+        [
+          {
+            "node": "Code5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model in Perplexity2": {
+      "ai_tool": [
+        [
+          {
+            "node": "Search Terms Designer2",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code5": {
+      "main": [
+        [
+          {
+            "node": "New researched topics",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Getting_Pending_PillarBlog_Idea": {
+      "main": [
+        [
+          {
+            "node": "First_Row_Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "First_Row_Filter": {
+      "main": [
+        [
+          {
+            "node": "Pillar_BlogPost_Topic+URL",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pillar_BlogPost_Topic+URL": {
+      "main": [
+        [
+          {
+            "node": "Clean_Format",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clean_Format": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Published_Pillar Blogs_Data": {
+      "main": [
+        [
+          {
+            "node": "Manual Choice(Telegram_not yet build)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Choice(Telegram_not yet build)": {
+      "main": [
+        [
+          {
+            "node": "Published_Cluster_Blogs_Data_Under selected pillar",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Split Out1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Published_Cluster_Blogs_Data_Under selected pillar": {
+      "main": [
+        [
+          {
+            "node": "Filtering Essential Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Multiple Items to one": {
+      "main": [
+        [
+          {
+            "node": "Search Terms Designer2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out1": {
+      "main": [
+        [
+          {
+            "node": "Merging",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filtering Essential Fields": {
+      "main": [
+        [
+          {
+            "node": "Merging",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merging": {
+      "main": [
+        [
+          {
+            "node": "Multiple Items to one",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Published cluster topics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Published cluster topics": {
+      "main": [
+        [
+          {
+            "node": "Code1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "New researched topics": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Code1": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge1": {
+      "main": [
+        [
+          {
+            "node": "Search Terms Designer3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search Terms Designer3": {
+      "main": [
+        [
+          {
+            "node": "Merge2",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge2": {
+      "main": [
+        [
+          {
+            "node": "Code2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code2": {
+      "main": [
+        [
+          {
+            "node": "Manual Choice(Telegram_not yet build)1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Choice(Telegram_not yet build)1": {
+      "main": [
+        [
+          {
+            "node": "Merge3",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge3": {
+      "main": [
+        [
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out": {
+      "main": [
+        [
+          {
+            "node": "Inserting_Topic+URL data in Google Sheet1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Inserting_Topic+URL data in Google Sheet1": {
+      "main": [
+        [
+          {
+            "node": "Execute Workflow1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Pillar_BlogPost_Topic+URL",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Search Terms Designer2",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Search Terms Designer3",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "5d7a9729-e772-4991-b58d-2d20a22da1c2",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "6879c4d326ba21d1ccb65b8539bd2e9444dca559b9181b34dd45567cb223f8c9"
+  },
+  "id": "uQQhnG2P0WhST5lJ",
+  "tags": []
+}
