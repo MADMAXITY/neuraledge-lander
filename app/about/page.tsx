@@ -106,7 +106,7 @@ export default function AboutPage() {
           <h2 className="text-3xl font-bold mb-6">Our Technology Philosophy</h2>
           <div className="space-y-6 text-lg text-muted-foreground">
             <p>
-              <span className="text-foreground font-semibold">"We don't chase hype. We deploy systems that work."</span>
+              <span className="text-foreground font-semibold">&ldquo;We don&apos;t chase hype. We deploy systems that work.&rdquo;</span>
             </p>
             <p>
               Our stack is built for production: LLM operations with OpenAI/Claude/Gemini, orchestration via n8n/Make,
@@ -119,7 +119,7 @@ export default function AboutPage() {
           </div>
 
           <div className="mt-12 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8">
-            {["OpenAI", "Claude AI", "n8n", "Make", "Zapier", "Supabase"].map((tool, index) => (
+            {["OpenAI", "Claude AI", "n8n", "Make", "Zapier", "Supabase"].map((tool) => (
               <div key={tool} className="flex items-center justify-center">
                 <div className="relative w-24 h-16 opacity-60 hover:opacity-100 transition-opacity">
                   <Image
